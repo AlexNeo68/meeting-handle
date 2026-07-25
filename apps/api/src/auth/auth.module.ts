@@ -1,11 +1,14 @@
 import { Module } from '@nestjs/common';
+import { CqrsModule } from '@nestjs/cqrs';
 import { JwtModule } from '@nestjs/jwt';
-import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
 import { PrismaModule } from '../prisma/prisma.module';
+import { AuthController } from './auth.controller';
+import { RegisterHandler } from './commands/register.handler';
+import { LoginHandler } from './queries/login.handler';
 
 @Module({
   imports: [
+    CqrsModule,
     PrismaModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'test-secret',
@@ -13,6 +16,6 @@ import { PrismaModule } from '../prisma/prisma.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService],
+  providers: [RegisterHandler, LoginHandler],
 })
 export class AuthModule {}
