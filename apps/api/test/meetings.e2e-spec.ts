@@ -36,7 +36,7 @@ describe('Meetings (e2e)', () => {
         .post('/auth/register')
         .send({ email: 'meeting-create@example.com', password: 'password123' });
 
-      const userId = userRes.body.user.id;
+      const userId = userRes.body.userId;
 
       const res = await request(app.getHttpServer())
         .post('/meetings')
@@ -73,7 +73,7 @@ describe('Meetings (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/meetings')
-        .set('x-user-id', userRes.body.user.id)
+        .set('x-user-id', userRes.body.userId)
         .send({
           title: 'Bad Date',
           date: 'not-a-date',
@@ -89,7 +89,7 @@ describe('Meetings (e2e)', () => {
 
       await request(app.getHttpServer())
         .post('/meetings')
-        .set('x-user-id', userRes.body.user.id)
+        .set('x-user-id', userRes.body.userId)
         .send({
           title: 'Test',
           date: '2026-08-01T10:00:00Z',
@@ -104,7 +104,7 @@ describe('Meetings (e2e)', () => {
       const userRes = await request(app.getHttpServer())
         .post('/auth/register')
         .send({ email: 'meetings-list@example.com', password: 'password123' });
-      const userId = userRes.body.user.id;
+      const userId = userRes.body.userId;
 
       await request(app.getHttpServer())
         .post('/meetings')
@@ -138,7 +138,7 @@ describe('Meetings (e2e)', () => {
       const userRes = await request(app.getHttpServer())
         .post('/auth/register')
         .send({ email: 'empty-list@example.com', password: 'password123' });
-      const userId = userRes.body.user.id;
+      const userId = userRes.body.userId;
 
       const res = await request(app.getHttpServer())
         .get('/meetings')
@@ -154,7 +154,7 @@ describe('Meetings (e2e)', () => {
       const userRes = await request(app.getHttpServer())
         .post('/auth/register')
         .send({ email: 'get-meeting@example.com', password: 'password123' });
-      const userId = userRes.body.user.id;
+      const userId = userRes.body.userId;
 
       const createRes = await request(app.getHttpServer())
         .post('/meetings')
@@ -184,7 +184,7 @@ describe('Meetings (e2e)', () => {
 
       await request(app.getHttpServer())
         .get('/meetings/00000000-0000-0000-0000-000000000000')
-        .set('x-user-id', userRes.body.user.id)
+        .set('x-user-id', userRes.body.userId)
         .expect(404);
     });
 

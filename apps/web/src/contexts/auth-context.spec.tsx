@@ -38,13 +38,19 @@ describe('AuthContext', () => {
     expect(result.current.token).toBe(mockToken);
   });
 
-  it('login calls POST /auth/login and stores token', async () => {
+  it('login calls POST /auth/login then GET /user/profile and stores token', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({ token: mockToken, user: mockUser }),
-      }),
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ token: mockToken, userId: mockUser.id }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockUser,
+        }),
     );
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
@@ -57,6 +63,10 @@ describe('AuthContext', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'test@example.com', password: 'password123' }),
+    });
+
+    expect(fetch).toHaveBeenCalledWith('/user/profile', {
+      headers: { Authorization: `Bearer ${mockToken}` },
     });
 
     expect(result.current.isAuthenticated).toBe(true);

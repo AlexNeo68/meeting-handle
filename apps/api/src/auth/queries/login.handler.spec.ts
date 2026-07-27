@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { EventBus } from '@nestjs/cqrs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginQuery } from './login.query';
 import { LoginHandler } from './login.handler';
@@ -8,8 +9,7 @@ import * as bcrypt from 'bcrypt';
 
 describe('LoginHandler', () => {
   let handler: LoginHandler;
-  let prisma: PrismaService;
-  let jwtService: JwtService;
+  let eventBus: EventBus;
 
   const mockPrisma = {
     user: {
@@ -21,25 +21,29 @@ describe('LoginHandler', () => {
     sign: jest.fn().mockReturnValue('test-jwt-token'),
   };
 
+  const mockEventBus = {
+    publish: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LoginHandler,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: EventBus, useValue: mockEventBus },
       ],
     }).compile();
 
     handler = module.get<LoginHandler>(LoginHandler);
-    prisma = module.get<PrismaService>(PrismaService);
-    jwtService = module.get<JwtService>(JwtService);
+    eventBus = module.get<EventBus>(EventBus);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should return a JWT token for valid credentials', async () => {
+  it('should return a JWT token and publish event for valid credentials', async () => {
     const query = new LoginQuery('user@example.com', 'password123');
     const hashedPassword = await bcrypt.hash(query.password, 10);
 
@@ -52,10 +56,8 @@ describe('LoginHandler', () => {
     const result = await handler.execute(query);
 
     expect(result.token).toBe('test-jwt-token');
-    expect(result.user).toEqual({
-      id: 'uuid-123',
-      email: query.email,
-    });
+    expect(result.userId).toBe('uuid-123');
+    expect(eventBus.publish).toHaveBeenCalledTimes(1);
   });
 
   it('should throw UnauthorizedException for non-existent email', async () => {
@@ -64,6 +66,7 @@ describe('LoginHandler', () => {
     mockPrisma.user.findUnique.mockResolvedValue(null);
 
     await expect(handler.execute(query)).rejects.toThrow(UnauthorizedException);
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 
   it('should throw UnauthorizedException for wrong password', async () => {
@@ -77,5 +80,6 @@ describe('LoginHandler', () => {
     });
 
     await expect(handler.execute(query)).rejects.toThrow(UnauthorizedException);
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 });

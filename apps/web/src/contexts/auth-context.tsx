@@ -44,10 +44,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw new Error(data.message || 'Ошибка авторизации');
     }
 
+    const profileRes = await fetch('/user/profile', {
+      headers: { Authorization: `Bearer ${data.token}` },
+    });
+
+    const profile = await profileRes.json();
+
     localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(data.user));
+    localStorage.setItem('user', JSON.stringify(profile));
     setToken(data.token);
-    setUser(data.user);
+    setUser(profile);
   }, []);
 
   const logout = useCallback(() => {

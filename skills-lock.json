@@ -31,6 +31,12 @@
       "skillPath": "skills/requesting-code-review/SKILL.md",
       "computedHash": "2304d2073c62eab163e04de40fe775e3d87c69c0df40cd4dc953fdb8e3205b81"
     },
+    "tdd-red-green-refactor": {
+      "source": "google-labs-code/stitch-sdk",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/tdd/SKILL.md",
+      "computedHash": "100869961c315decdb1ad3d003ffa7e0a11efaceb3c5d15bde00e04a38b98e52"
+    },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",

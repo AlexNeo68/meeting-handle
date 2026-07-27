@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { EventBus } from '@nestjs/cqrs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterCommand } from './register.command';
 import { RegisterHandler } from './register.handler';
@@ -8,8 +9,7 @@ import * as bcrypt from 'bcrypt';
 
 describe('RegisterHandler', () => {
   let handler: RegisterHandler;
-  let prisma: PrismaService;
-  let jwtService: JwtService;
+  let eventBus: EventBus;
 
   const mockPrisma = {
     user: {
@@ -22,25 +22,29 @@ describe('RegisterHandler', () => {
     sign: jest.fn().mockReturnValue('test-jwt-token'),
   };
 
+  const mockEventBus = {
+    publish: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RegisterHandler,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwtService },
+        { provide: EventBus, useValue: mockEventBus },
       ],
     }).compile();
 
     handler = module.get<RegisterHandler>(RegisterHandler);
-    prisma = module.get<PrismaService>(PrismaService);
-    jwtService = module.get<JwtService>(JwtService);
+    eventBus = module.get<EventBus>(EventBus);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('should create a user and return a JWT token', async () => {
+  it('should create a user, publish event, and return a JWT token', async () => {
     const command = new RegisterCommand('user@example.com', 'password123');
     const hashedPassword = await bcrypt.hash(command.password, 10);
 
@@ -56,16 +60,14 @@ describe('RegisterHandler', () => {
     const result = await handler.execute(command);
 
     expect(result.token).toBe('test-jwt-token');
-    expect(result.user).toEqual({
-      id: 'uuid-123',
-      email: command.email,
-    });
+    expect(result.userId).toBe('uuid-123');
     expect(mockPrisma.user.create).toHaveBeenCalledWith({
       data: {
         email: command.email,
         password: expect.any(String),
       },
     });
+    expect(eventBus.publish).toHaveBeenCalledTimes(1);
     expect(bcrypt.compareSync(command.password, hashedPassword)).toBe(true);
   });
 
@@ -80,5 +82,6 @@ describe('RegisterHandler', () => {
     await expect(handler.execute(command)).rejects.toThrow(ConflictException);
 
     expect(mockPrisma.user.create).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
   });
 });

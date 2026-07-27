@@ -22,6 +22,7 @@ describe('Auth (e2e)', () => {
   });
 
   beforeEach(async () => {
+    await prisma.meeting.deleteMany();
     await prisma.user.deleteMany();
   });
 
@@ -30,7 +31,7 @@ describe('Auth (e2e)', () => {
   });
 
   describe('POST /auth/register', () => {
-    it('should register a new user and return 201 with token', async () => {
+    it('should register a new user and return 201 with token and userId', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/register')
         .send({ email: 'newuser@example.com', password: 'password123' })
@@ -38,8 +39,8 @@ describe('Auth (e2e)', () => {
 
       expect(res.body.token).toBeDefined();
       expect(typeof res.body.token).toBe('string');
-      expect(res.body.user.email).toBe('newuser@example.com');
-      expect(res.body.user).not.toHaveProperty('password');
+      expect(res.body.userId).toBeDefined();
+      expect(typeof res.body.userId).toBe('string');
     });
 
     it('should return 409 when email already exists', async () => {
@@ -76,7 +77,7 @@ describe('Auth (e2e)', () => {
         .send({ email: 'login-test@example.com', password: 'password123' });
     });
 
-    it('should login and return 200 with token', async () => {
+    it('should login and return 200 with token and userId', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login')
         .send({ email: 'login-test@example.com', password: 'password123' })
@@ -84,7 +85,8 @@ describe('Auth (e2e)', () => {
 
       expect(res.body.token).toBeDefined();
       expect(typeof res.body.token).toBe('string');
-      expect(res.body.user.email).toBe('login-test@example.com');
+      expect(res.body.userId).toBeDefined();
+      expect(typeof res.body.userId).toBe('string');
     });
 
     it('should return 401 for wrong password', async () => {
@@ -99,6 +101,29 @@ describe('Auth (e2e)', () => {
         .post('/auth/login')
         .send({ email: 'ghost@example.com', password: 'password123' })
         .expect(401);
+    });
+  });
+
+  describe('GET /user/profile', () => {
+    it('should return user profile for authenticated user', async () => {
+      const registerRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'profile@example.com', password: 'password123' });
+
+      const token = registerRes.body.token;
+
+      const res = await request(app.getHttpServer())
+        .get('/user/profile')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body.email).toBe('profile@example.com');
+      expect(res.body.id).toBeDefined();
+      expect(res.body).not.toHaveProperty('password');
+    });
+
+    it('should return 401 without token', async () => {
+      await request(app.getHttpServer()).get('/user/profile').expect(401);
     });
   });
 });

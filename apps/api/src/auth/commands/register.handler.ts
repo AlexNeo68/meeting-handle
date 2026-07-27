@@ -1,15 +1,17 @@
 import { ConflictException } from '@nestjs/common';
-import { CommandHandler, ICommandHandler } from '@nestjs/cqrs';
+import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterCommand } from './register.command';
+import { UserRegisteredEvent } from '../../user/events/user-registered.event';
 
 @CommandHandler(RegisterCommand)
 export class RegisterHandler implements ICommandHandler<RegisterCommand> {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(command: RegisterCommand) {
@@ -30,11 +32,13 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
       },
     });
 
+    this.eventBus.publish(new UserRegisteredEvent(user.id, user.email));
+
     const token = this.jwtService.sign({ sub: user.id, email: user.email });
 
     return {
       token,
-      user: { id: user.id, email: user.email },
+      userId: user.id,
     };
   }
 }

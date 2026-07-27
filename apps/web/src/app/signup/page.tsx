@@ -118,7 +118,13 @@ function SignupForm() {
       }
 
       localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+
+      const profileRes = await fetch('/user/profile', {
+        headers: { Authorization: `Bearer ${data.token}` },
+      });
+
+      const profile = await profileRes.json();
+      localStorage.setItem('user', JSON.stringify(profile));
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Что-то пошло не так. Попробуйте снова');

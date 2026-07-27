@@ -1,15 +1,17 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { EventBus, IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginQuery } from './login.query';
+import { UserLoggedInEvent } from '../../user/events/user-logged-in.event';
 
 @QueryHandler(LoginQuery)
 export class LoginHandler implements IQueryHandler<LoginQuery> {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly eventBus: EventBus,
   ) {}
 
   async execute(query: LoginQuery) {
@@ -27,11 +29,13 @@ export class LoginHandler implements IQueryHandler<LoginQuery> {
       throw new UnauthorizedException('Invalid credentials');
     }
 
+    this.eventBus.publish(new UserLoggedInEvent(user.id, user.email));
+
     const token = this.jwtService.sign({ sub: user.id, email: user.email });
 
     return {
       token,
-      user: { id: user.id, email: user.email },
+      userId: user.id,
     };
   }
 }
