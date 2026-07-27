@@ -18,7 +18,8 @@
     "format:check": "prettier --check \"apps/**/*.{ts,tsx,json,md}\"",
     "test": "npm run test -w apps/web && npm run test -w apps/api",
     "test:web": "npm run test -w apps/web",
-    "test:api": "npm run test -w apps/api"
+    "test:api": "npm run test -w apps/api",
+    "prepare": "husky"
   },
   "overrides": {
     "react": "^19.0.0",
@@ -32,6 +33,7 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-react": "^7.34.0",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "husky": "^9.1.7",
     "prettier": "^3.2.0",
     "typescript": "^5.4.0"
   }
