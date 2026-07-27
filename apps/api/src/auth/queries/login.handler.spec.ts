@@ -63,9 +63,7 @@ describe('LoginHandler', () => {
 
     mockPrisma.user.findUnique.mockResolvedValue(null);
 
-    await expect(handler.execute(query)).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(handler.execute(query)).rejects.toThrow(UnauthorizedException);
   });
 
   it('should throw UnauthorizedException for wrong password', async () => {
@@ -78,8 +76,6 @@ describe('LoginHandler', () => {
       password: hashedPassword,
     });
 
-    await expect(handler.execute(query)).rejects.toThrow(
-      UnauthorizedException,
-    );
+    await expect(handler.execute(query)).rejects.toThrow(UnauthorizedException);
   });
 });

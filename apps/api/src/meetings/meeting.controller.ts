@@ -1,9 +1,11 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserId } from '../common/decorators/user-id.decorator';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 import { MeetingService } from './meeting.service';
 
 @Controller('meetings')
+@UseGuards(JwtAuthGuard)
 export class MeetingController {
   constructor(private readonly meetingService: MeetingService) {}
 

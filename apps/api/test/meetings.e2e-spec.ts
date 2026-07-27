@@ -15,9 +15,7 @@ describe('Meetings (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }),
-    );
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
     await app.init();
 
     prisma = app.get(PrismaService);
@@ -132,12 +130,8 @@ describe('Meetings (e2e)', () => {
         .expect(200);
 
       expect(res.body).toHaveLength(2);
-      expect(res.body.map((m: { title: string }) => m.title)).toContain(
-        'Meeting 1',
-      );
-      expect(res.body.map((m: { title: string }) => m.title)).toContain(
-        'Meeting 2',
-      );
+      expect(res.body.map((m: { title: string }) => m.title)).toContain('Meeting 1');
+      expect(res.body.map((m: { title: string }) => m.title)).toContain('Meeting 2');
     });
 
     it('should return empty array when user has no meetings', async () => {

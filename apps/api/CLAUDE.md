@@ -17,6 +17,7 @@ npm run lint      # eslint src/**/*.ts
 ```
 
 Из корня monorepo:
+
 ```bash
 npm run dev:api   # npm run dev -w apps/api
 npm run build:api # npm run build -w apps/api
@@ -80,15 +81,15 @@ apps/api/
 Controller → CommandBus / QueryBus → Handler → Prisma
 ```
 
-| Слой | Файл | Назначение |
-|------|------|-----------|
-| DTO | `dto/register.dto.ts` | Валидация входящих данных (`class-validator`) |
-| Command | `commands/register.command.ts` | Plain class с `public readonly` полями |
-| Handler | `commands/register.handler.ts` | `@CommandHandler(RegisterCommand)`, implements `ICommandHandler` |
-| Query | `queries/login.query.ts` | Plain class |
-| Handler | `queries/login.handler.ts` | `@QueryHandler(LoginQuery)`, implements `IQueryHandler` |
-| Module | `auth.module.ts` | Импортирует `CqrsModule`, регистрирует хендлеры в `providers` |
-| Controller | `auth.controller.ts` | Инжектит `CommandBus` и `QueryBus`, вызывает `.execute()` |
+| Слой       | Файл                           | Назначение                                                       |
+| ---------- | ------------------------------ | ---------------------------------------------------------------- |
+| DTO        | `dto/register.dto.ts`          | Валидация входящих данных (`class-validator`)                    |
+| Command    | `commands/register.command.ts` | Plain class с `public readonly` полями                           |
+| Handler    | `commands/register.handler.ts` | `@CommandHandler(RegisterCommand)`, implements `ICommandHandler` |
+| Query      | `queries/login.query.ts`       | Plain class                                                      |
+| Handler    | `queries/login.handler.ts`     | `@QueryHandler(LoginQuery)`, implements `IQueryHandler`          |
+| Module     | `auth.module.ts`               | Импортирует `CqrsModule`, регистрирует хендлеры в `providers`    |
+| Controller | `auth.controller.ts`           | Инжектит `CommandBus` и `QueryBus`, вызывает `.execute()`        |
 
 **Command** — мутирующая операция (CUD). Именуется глаголом: `RegisterCommand`.
 **Query** — читающая операция (R). Именуется существительным: `LoginQuery`.

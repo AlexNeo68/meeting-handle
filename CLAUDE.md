@@ -4,10 +4,10 @@
 
 Meeting AI — монолитное приложение для обработки и анализа встреч (meeting intelligence). Состоит из двух приложений в npm workspaces:
 
-| App     | Path       | Stack                              |
-| ------- | ---------- | ---------------------------------- |
-| **Web** | `apps/web` | Next.js 14 (App Router) + React 18 |
-| **API** | `apps/api` | NestJS 10 (Express)                |
+| App     | Path       | Stack                                         |
+| ------- | ---------- | --------------------------------------------- |
+| **Web** | `apps/web` | Next.js 15 (App Router) + React 19 + HeroUI v3 |
+| **API** | `apps/api` | NestJS 10 (Express)                            |
 
 ## Quick start
 
@@ -75,9 +75,45 @@ npm run build -w apps/api   # сборка только api
 - При добавлении/удалении/переименовании npm-скриптов обнови таблицу в `## Доступные скрипты`.
 - При изменении стека (фреймворк, версия, рантайм) обнови таблицу приложений в `## Overview`.
 
+## UI/UX Quality Control
+
+**При любом изменении интерфейса (компоненты, страницы, стили, лейаут) — ОБЯЗАТЕЛЬНО:**
+
+1. **Загрузи скилл `ui-ux-pro-max`** и выполни полную проверку изменённых элементов:
+   - Запусти `--design-system` для проекта (если ещё не создан `design-system/meeting-ai/MASTER.md` — создай с ключевыми словами `"meeting intelligence AI SaaS dashboard"`).
+   - Пройди по приоритетам 1–10 из таблицы Rule Categories (Accessibility → Touch → Performance → Style → Layout → Typography → Animation → Forms → Navigation → Charts).
+   - Проверь изменённые файлы через `references/pro-rules.md` — canonical Pre-Delivery Checklist.
+
+2. **Исправь ВСЕ найденные ошибки** до завершения задачи. Не оставляй UI-проблемы «на потом» — каждое найденное нарушение должно быть исправлено в том же коммите.
+
+3. **Критические проверки (must-have перед любым UI-изменением):**
+   - Контраст текста ≥ 4.5:1 (WCAG AA)
+   - Минимальный размер интерактивных элементов 44×44px
+   - Alt-text для всех изображений/icon-only кнопок — label или aria-label
+   - Keyboard navigation — все интерактивные элементы доступны через Tab
+   - Нет horizontal scroll ни на одном viewport
+   - Нет Cumulative Layout Shift (CLS < 0.1)
+   - Все анимации 150–300ms, respects `prefers-reduced-motion`
+
+4. **Визуальное качество:**
+   - Используй только SVG-иконки (не emoji)
+   - Единая типографика из рекомендаций скилла (base 16px, line-height 1.5)
+   - Цвета — из semantic tokens, не raw hex
+   - Единая шкала отступов, нет смешанных layout-паттернов
+   - Loading states для всех асинхронных операций
+   - Error states рядом с полем/элементом, не только вверху страницы
+
 ## Skills
 
 Проект использует AI-скиллы — наборы инструкций для Claude, которые помогают выполнять типовые задачи (code review, следование best practices и т.д.). Скиллы хранятся и настраиваются через `.claude/skills/` и `.agents/skills/`.
+
+| Скилл | Путь | Назначение |
+|-------|------|------------|
+| `meeting-ai-ui-ux-audit` | `.claude/skills/meeting-ai-ui-ux-audit/` | Проектные паттерны UI/UX качества: найденные и исправленные ошибки, чеклисты, шаблоны валидации |
+| `git-commit` | `.claude/skills/git-commit/` | Conventional commits |
+| `nestjs-best-practices` | `.claude/skills/nestjs-best-practices/` | NestJS архитектура и паттерны |
+| `vercel-react-best-practices` | `.claude/skills/vercel-react-best-practices/` | React/Next.js оптимизация |
+| `ui-ux-pro-max` | `.claude/skills/ui-ux-pro-max/` | Универсальная база UI/UX правил (84 стиля, 192 палитры, 98 гайдлайнов) |
 
 - **При добавлении новой функциональности или возможности** — актуализируй скиллы проекта, чтобы в них всегда была информация об актуальной кодовой базе и о том, где какая функция реализована.
 - Если скилл ссылается на конкретные файлы, модули, эндпоинты или компоненты — проверь, что пути и описания соответствуют текущей структуре проекта.

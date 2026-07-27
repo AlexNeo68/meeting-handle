@@ -1,0 +1,14 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e31]:
+    - log
+    - log
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "Welcome aboard!" [level=3] [ref=e32]
+      - paragraph [ref=e6]: Your account has been created successfully.
+    - paragraph [ref=e34]:
+      - text: You are now signed in as
+      - strong [ref=e35]: playwright@test.com
+    - button "Go to Dashboard" [ref=e37] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e26] [cursor=pointer]
+  - alert [ref=e30]

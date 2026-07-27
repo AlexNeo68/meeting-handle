@@ -1,0 +1,21 @@
+- generic [ref=f4e3]:
+  - generic [ref=f4e4]:
+    - heading "Создать аккаунт" [level=3] [ref=f4e5]
+    - paragraph [ref=f4e6]: Зарегистрируйтесь, чтобы начать работу с Meeting AI
+  - generic [ref=f4e7]:
+    - generic [ref=f4e9]:
+      - generic [ref=f4e10]:
+        - generic [ref=f4e11]: Email*
+        - textbox "Email*" [ref=f4e12]:
+          - /placeholder: you@example.com
+      - generic [ref=f4e13]:
+        - generic [ref=f4e14]: Пароль*
+        - textbox "Пароль*" [ref=f4e15]:
+          - /placeholder: Минимум 6 символов
+        - generic [ref=f4e16]: Минимум 6 символов
+    - generic [ref=f4e17]:
+      - button "Зарегистрироваться" [ref=f4e18] [cursor=pointer]
+      - generic [ref=f4e19]:
+        - text: Уже есть аккаунт?
+        - link "Войти" [ref=f4e20] [cursor=pointer]:
+          - /url: /

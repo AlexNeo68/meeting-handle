@@ -1,0 +1,21 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "Create Account" [level=3] [ref=e5]
+    - paragraph [ref=e6]: Sign up to get started with Meeting AI
+  - generic [ref=e7]:
+    - generic [ref=e9]:
+      - generic [ref=e10]:
+        - generic [ref=e11]: Email*
+        - textbox "Email*" [ref=e12]:
+          - /placeholder: you@example.com
+      - generic [ref=e13]:
+        - generic [ref=e14]: Password*
+        - textbox "Password*" [ref=e15]:
+          - /placeholder: Min. 6 characters
+        - generic [ref=e16]: Must be at least 6 characters
+    - generic [ref=e17]:
+      - button "Sign Up" [ref=e18] [cursor=pointer]
+      - generic [ref=e19]:
+        - text: Already have an account?
+        - link "Sign in" [ref=e20] [cursor=pointer]:
+          - /url: /

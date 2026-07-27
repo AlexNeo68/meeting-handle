@@ -1,0 +1,5 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - heading "Meeting AI" [level=1] [ref=e3]
+    - paragraph [ref=e4]: Welcome to Meeting AI — your intelligent meeting assistant.
+  - alert [ref=e5]

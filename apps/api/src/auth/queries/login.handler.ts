@@ -21,10 +21,7 @@ export class LoginHandler implements IQueryHandler<LoginQuery> {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      query.password,
-      user.password,
-    );
+    const isPasswordValid = await bcrypt.compare(query.password, user.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');

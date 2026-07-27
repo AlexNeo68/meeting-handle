@@ -4,7 +4,7 @@ description: Required reference for Prisma v7 driver adapter work. Use when impl
 license: MIT
 metadata:
   author: Tyler Benfield
-  version: "7.6.0"
+  version: '7.6.0'
 ---
 
 # Prisma 7 Driver Adapter Implementation Guide
@@ -66,11 +66,8 @@ import type {
   ArgType,
   ConnectionInfo,
   MappedError,
-} from "@prisma/driver-adapter-utils";
-import {
-  ColumnTypeEnum,
-  DriverAdapterError,
-} from "@prisma/driver-adapter-utils";
+} from '@prisma/driver-adapter-utils';
+import { ColumnTypeEnum, DriverAdapterError } from '@prisma/driver-adapter-utils';
 ```
 
 ## Interface Definitions
@@ -87,7 +84,7 @@ type SqlQuery = {
 type ArgType = {
   scalarType: ArgScalarType; // 'string' | 'int' | 'bigint' | 'float' | 'decimal' | 'boolean' | 'enum' | 'uuid' | 'json' | 'datetime' | 'bytes' | 'unknown'
   dbType?: string;
-  arity: "scalar" | "list";
+  arity: 'scalar' | 'list';
 };
 ```
 
@@ -168,7 +165,7 @@ type TransactionOptions = { usePhantomQuery: boolean };
 
 ```typescript
 interface SqlMigrationAwareDriverAdapterFactory {
-  readonly provider: "mysql" | "postgres" | "sqlite" | "sqlserver";
+  readonly provider: 'mysql' | 'postgres' | 'sqlite' | 'sqlserver';
   readonly adapterName: string;
   connect(): Promise<SqlDriverAdapter>;
   connectToShadowDb(): Promise<SqlDriverAdapter>;
@@ -235,11 +232,7 @@ class MyTransaction extends MyQueryable<TClient> implements Transaction {
   readonly options: TransactionOptions;
   readonly #release: () => void;
 
-  constructor(
-    client: TClient,
-    options: TransactionOptions,
-    release: () => void,
-  ) {
+  constructor(client: TClient, options: TransactionOptions, release: () => void) {
     super(client);
     this.options = options;
     this.#release = release;
@@ -279,20 +272,18 @@ class MyAdapter extends MyQueryable<TClient> implements SqlDriverAdapter {
     }
   }
 
-  async startTransaction(
-    isolationLevel?: IsolationLevel,
-  ): Promise<Transaction> {
+  async startTransaction(isolationLevel?: IsolationLevel): Promise<Transaction> {
     // Validate isolation level for your database
     const validLevels = new Set<IsolationLevel>([
-      "READ UNCOMMITTED",
-      "READ COMMITTED",
-      "REPEATABLE READ",
-      "SERIALIZABLE",
+      'READ UNCOMMITTED',
+      'READ COMMITTED',
+      'REPEATABLE READ',
+      'SERIALIZABLE',
     ]);
 
     if (isolationLevel !== undefined && !validLevels.has(isolationLevel)) {
       throw new DriverAdapterError({
-        kind: "InvalidIsolationLevel",
+        kind: 'InvalidIsolationLevel',
         level: isolationLevel,
       });
     }
@@ -305,9 +296,7 @@ class MyAdapter extends MyQueryable<TClient> implements SqlDriverAdapter {
     try {
       if (depth === 1) {
         // Issue BEGIN (with isolation level if specified)
-        const beginSql = isolationLevel
-          ? `BEGIN ISOLATION LEVEL ${isolationLevel}`
-          : "BEGIN";
+        const beginSql = isolationLevel ? `BEGIN ISOLATION LEVEL ${isolationLevel}` : 'BEGIN';
         await this.client.query(beginSql);
       } else {
         // Nested: use savepoints
@@ -346,8 +335,8 @@ export type MyAdapterOptions = {
 };
 
 export class MyAdapterFactory implements SqlMigrationAwareDriverAdapterFactory {
-  readonly provider = "postgres" as const;
-  readonly adapterName = "@my-org/adapter-mydb" as const;
+  readonly provider = 'postgres' as const;
+  readonly adapterName = '@my-org/adapter-mydb' as const;
 
   constructor(
     private readonly config: MyAdapterConfig,
@@ -417,7 +406,7 @@ function mapRow(row: unknown[], columnTypes: ColumnType[]): ResultValue[] {
     }
 
     // bigint → string for Int64 (JSON-safe)
-    if (typeof value === "bigint") {
+    if (typeof value === 'bigint') {
       result.push(value.toString());
       continue;
     }
@@ -429,7 +418,7 @@ function mapRow(row: unknown[], columnTypes: ColumnType[]): ResultValue[] {
     }
 
     // JSON objects → stringified
-    if (colType === ColumnTypeEnum.Json && typeof value === "object") {
+    if (colType === ColumnTypeEnum.Json && typeof value === 'object') {
       result.push(JSON.stringify(value));
       continue;
     }
@@ -447,13 +436,13 @@ When the driver doesn't provide type metadata, infer from JS values:
 
 ```typescript
 function inferColumnType(value: NonNullable<unknown>): ColumnType {
-  if (typeof value === "boolean") return ColumnTypeEnum.Boolean;
-  if (typeof value === "bigint") return ColumnTypeEnum.Int64;
+  if (typeof value === 'boolean') return ColumnTypeEnum.Boolean;
+  if (typeof value === 'bigint') return ColumnTypeEnum.Int64;
   if (value instanceof Uint8Array) return ColumnTypeEnum.Bytes;
   if (value instanceof Date) return ColumnTypeEnum.DateTime;
   if (Array.isArray(value)) return ColumnTypeEnum.Text; // fallback
-  if (typeof value === "object") return ColumnTypeEnum.Json;
-  if (typeof value === "number") return ColumnTypeEnum.UnknownNumber;
+  if (typeof value === 'object') return ColumnTypeEnum.Json;
+  if (typeof value === 'number') return ColumnTypeEnum.UnknownNumber;
   return ColumnTypeEnum.Text;
 }
 ```
@@ -469,23 +458,23 @@ function convertDriverError(error: unknown): MappedError {
     const dbError = error as Error & { code?: string; errno?: number };
 
     // PostgreSQL example
-    if (dbError.code === "23505") {
-      return { kind: "UniqueConstraintViolation" };
+    if (dbError.code === '23505') {
+      return { kind: 'UniqueConstraintViolation' };
     }
-    if (dbError.code === "23502") {
-      return { kind: "NullConstraintViolation" };
+    if (dbError.code === '23502') {
+      return { kind: 'NullConstraintViolation' };
     }
-    if (dbError.code === "23503") {
-      return { kind: "ForeignKeyConstraintViolation" };
+    if (dbError.code === '23503') {
+      return { kind: 'ForeignKeyConstraintViolation' };
     }
-    if (dbError.code === "42P01") {
-      return { kind: "TableDoesNotExist" };
+    if (dbError.code === '42P01') {
+      return { kind: 'TableDoesNotExist' };
     }
 
     // SQLite example
-    if (error.name === "SQLiteError") {
+    if (error.name === 'SQLiteError') {
       return {
-        kind: "sqlite",
+        kind: 'sqlite',
         extendedCode: dbError.errno ?? 1,
         message: error.message,
       };
@@ -494,9 +483,9 @@ function convertDriverError(error: unknown): MappedError {
     // PostgreSQL raw error
     if (dbError.code) {
       return {
-        kind: "postgres",
+        kind: 'postgres',
         code: dbError.code,
-        severity: "ERROR",
+        severity: 'ERROR',
         message: error.message,
         detail: undefined,
         column: undefined,
@@ -505,7 +494,7 @@ function convertDriverError(error: unknown): MappedError {
     }
   }
 
-  return { kind: "GenericJs", id: 0 };
+  return { kind: 'GenericJs', id: 0 };
 }
 ```
 
@@ -540,30 +529,30 @@ function convertDriverError(error: unknown): MappedError {
 Test the adapter directly with the raw database driver:
 
 ```typescript
-describe("queryRaw", () => {
-  test("returns column names and types", async () => {
+describe('queryRaw', () => {
+  test('returns column names and types', async () => {
     const adapter = new MyAdapter(createTestConnection());
     const result = await adapter.queryRaw({
-      sql: "SELECT id, name FROM users",
+      sql: 'SELECT id, name FROM users',
       args: [],
       argTypes: [],
     });
-    expect(result.columnNames).toEqual(["id", "name"]);
+    expect(result.columnNames).toEqual(['id', 'name']);
     expect(result.columnTypes[0]).toBe(ColumnTypeEnum.Int32);
   });
 });
 
-describe("startTransaction", () => {
-  test("commit persists changes", async () => {
+describe('startTransaction', () => {
+  test('commit persists changes', async () => {
     const adapter = new MyAdapter(createTestConnection());
     const tx = await adapter.startTransaction();
     await tx.executeRaw({
-      sql: "INSERT INTO users (name) VALUES (?)",
-      args: ["Alice"],
+      sql: 'INSERT INTO users (name) VALUES (?)',
+      args: ['Alice'],
       argTypes: [],
     });
     // Prisma sends COMMIT via executeRaw
-    await tx.executeRaw({ sql: "COMMIT", args: [], argTypes: [] });
+    await tx.executeRaw({ sql: 'COMMIT', args: [], argTypes: [] });
     await tx.commit(); // lifecycle hook only
     // Verify data persisted
   });
@@ -575,7 +564,7 @@ describe("startTransaction", () => {
 Test the full integration:
 
 ```typescript
-describe("E2E", () => {
+describe('E2E', () => {
   let prisma: PrismaClient;
 
   beforeEach(async () => {
@@ -583,19 +572,19 @@ describe("E2E", () => {
     prisma = new PrismaClient({ adapter: factory });
   });
 
-  test("CRUD operations", async () => {
-    const user = await prisma.user.create({ data: { name: "Alice" } });
+  test('CRUD operations', async () => {
+    const user = await prisma.user.create({ data: { name: 'Alice' } });
     expect(user.id).toBeGreaterThan(0);
 
     const found = await prisma.user.findUnique({ where: { id: user.id } });
-    expect(found?.name).toBe("Alice");
+    expect(found?.name).toBe('Alice');
   });
 
-  test("transactions roll back on error", async () => {
+  test('transactions roll back on error', async () => {
     await expect(
       prisma.$transaction(async (tx) => {
-        await tx.user.create({ data: { name: "Bob" } });
-        throw new Error("Rollback!");
+        await tx.user.create({ data: { name: 'Bob' } });
+        throw new Error('Rollback!');
       }),
     ).rejects.toThrow();
 
@@ -607,8 +596,8 @@ describe("E2E", () => {
 ## Usage Example
 
 ```typescript
-import { PrismaClient } from "./generated/prisma/client";
-import { MyAdapterFactory } from "@my-org/adapter-mydb";
+import { PrismaClient } from './generated/prisma/client';
+import { MyAdapterFactory } from '@my-org/adapter-mydb';
 
 const factory = new MyAdapterFactory({
   url: process.env.DATABASE_URL!,

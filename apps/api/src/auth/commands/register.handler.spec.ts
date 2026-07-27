@@ -66,9 +66,7 @@ describe('RegisterHandler', () => {
         password: expect.any(String),
       },
     });
-    expect(
-      bcrypt.compareSync(command.password, hashedPassword),
-    ).toBe(true);
+    expect(bcrypt.compareSync(command.password, hashedPassword)).toBe(true);
   });
 
   it('should throw ConflictException when email already exists', async () => {
@@ -79,9 +77,7 @@ describe('RegisterHandler', () => {
       email: command.email,
     });
 
-    await expect(handler.execute(command)).rejects.toThrow(
-      ConflictException,
-    );
+    await expect(handler.execute(command)).rejects.toThrow(ConflictException);
 
     expect(mockPrisma.user.create).not.toHaveBeenCalled();
   });
