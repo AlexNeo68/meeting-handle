@@ -37,6 +37,12 @@
       "skillPath": ".agents/skills/tdd/SKILL.md",
       "computedHash": "100869961c315decdb1ad3d003ffa7e0a11efaceb3c5d15bde00e04a38b98e52"
     },
+    "to-spec": {
+      "source": "mattpocock/skills",
+      "sourceType": "github",
+      "skillPath": "skills/engineering/to-spec/SKILL.md",
+      "computedHash": "0f544cd0c099c06f0dd0b7b9ee98b4237218e7e95fd3d3c02e791efbaf74bacb"
+    },
     "ui-ux-pro-max": {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "sourceType": "github",

@@ -113,6 +113,7 @@ npm run build -w apps/api   # сборка только api
 | `git-commit` | `.claude/skills/git-commit/` | Conventional commits |
 | `nestjs-best-practices` | `.claude/skills/nestjs-best-practices/` | NestJS архитектура и паттерны |
 | `vercel-react-best-practices` | `.claude/skills/vercel-react-best-practices/` | React/Next.js оптимизация |
+| `issues` | `.claude/skills/issues/` | Публикация плана (PRD, spec, tickets) как GitHub issues и milestones |
 | `ui-ux-pro-max` | `.claude/skills/ui-ux-pro-max/` | Универсальная база UI/UX правил (84 стиля, 192 палитры, 98 гайдлайнов) |
 
 - **При добавлении новой функциональности или возможности** — актуализируй скиллы проекта, чтобы в них всегда была информация об актуальной кодовой базе и о том, где какая функция реализована.
