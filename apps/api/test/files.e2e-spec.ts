@@ -162,6 +162,39 @@ describe('Files (e2e)', () => {
         })
         .expect(404);
     });
+
+    it('should sanitize a path-traversal filename on disk and keep the file downloadable', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('file', Buffer.from('fake-pdf-content'), {
+          filename: '../../evil.pdf',
+          contentType: 'application/pdf',
+        })
+        .expect(201);
+
+      const record = await prisma.meetingFile.findUnique({ where: { id: res.body.id } });
+      expect(record).not.toBeNull();
+      expect(record!.storagePath).not.toContain('..');
+
+      await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files/${res.body.id}/download`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+    });
+
+    it('should keep repeated uploads of the same filename as separate files', async () => {
+      const first = await uploadPdf().expect(201);
+      const second = await uploadPdf().expect(201);
+
+      expect(first.body.id).not.toBe(second.body.id);
+
+      const listRes = await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+      expect(listRes.body.files).toHaveLength(2);
+    });
   });
 
   describe('GET /meetings/:meetingId/files', () => {
@@ -248,6 +281,12 @@ describe('Files (e2e)', () => {
         .set('Authorization', `Bearer ${otherRes.body.token}`)
         .expect(404);
     });
+
+    it('should return 401 without auth', async () => {
+      await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files/00000000-0000-0000-0000-000000000000/download`)
+        .expect(401);
+    });
   });
 
   describe('GET /meetings/:meetingId/files/:fileId/preview', () => {
@@ -280,6 +319,12 @@ describe('Files (e2e)', () => {
         .get(`/meetings/${meetingId}/files/00000000-0000-0000-0000-000000000000/preview`)
         .set('Authorization', `Bearer ${token}`)
         .expect(404);
+    });
+
+    it('should return 401 without auth', async () => {
+      await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files/00000000-0000-0000-0000-000000000000/preview`)
+        .expect(401);
     });
   });
 
@@ -340,6 +385,12 @@ describe('Files (e2e)', () => {
         .delete(`/meetings/${meetingId}/files/${uploadRes.body.id}`)
         .set('Authorization', `Bearer ${otherRes.body.token}`)
         .expect(404);
+    });
+
+    it('should return 401 without auth', async () => {
+      await request(app.getHttpServer())
+        .delete(`/meetings/${meetingId}/files/00000000-0000-0000-0000-000000000000`)
+        .expect(401);
     });
   });
 });

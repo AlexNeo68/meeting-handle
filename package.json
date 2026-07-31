@@ -21,6 +21,9 @@
     "test": "npm run test -w apps/web && npm run test -w apps/api",
     "test:web": "npm run test -w apps/web",
     "test:api": "npm run test -w apps/api",
+    "test:e2e": "npm run test:e2e:api && npm run test:e2e:web",
+    "test:e2e:api": "npm run test:e2e -w apps/api",
+    "test:e2e:web": "playwright test",
     "prepare": "husky && npm run build:shared"
   },
   "overrides": {
@@ -29,6 +32,7 @@
     "multer": "^2.2.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "concurrently": "^8.2.0",
