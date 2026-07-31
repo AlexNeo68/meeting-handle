@@ -29,18 +29,31 @@ npm run build:web # npm run build -w apps/web
 ```
 apps/web/
 ├── src/
-│   └── app/
-│       ├── layout.tsx          # корневой layout (App Router)
-│       ├── page.tsx            # главная страница (/)
-│       ├── globals.css         # глобальные стили (Tailwind + HeroUI)
-│       └── signup/
-│           ├── page.tsx        # страница регистрации
-│           └── layout.tsx      # metadata для /signup
-├── next.config.js
+│   ├── app/
+│   │   ├── layout.tsx          # корневой layout (App Router)
+│   │   ├── page.tsx            # главная страница (/)
+│   │   ├── globals.css         # глобальные стили (Tailwind + HeroUI)
+│   │   ├── login/              # /login
+│   │   ├── signup/             # /signup (page + layout с metadata)
+│   │   └── (authenticated)/    # страницы под авторизацией
+│   │       ├── layout.tsx      # проверка токена, header с выходом
+│   │       ├── page.tsx        # список встреч (карточки-ссылки)
+│   │       └── meetings/[id]/  # страница встречи: инфо, участники, файлы
+│   ├── components/
+│   │   ├── file-upload/        # file-upload, file-list, file-item, index
+│   │   └── providers.tsx       # AuthProvider + ToastProvider
+│   ├── contexts/
+│   │   └── auth-context.tsx    # useAuth(): token/user/login/logout
+│   └── test-setup.ts           # vitest setup (jsdom, localStorage)
+├── next.config.js              # rewrites /api/* → http://localhost:3001/*
 ├── postcss.config.mjs          # PostCSS (Tailwind CSS v4)
 ├── tsconfig.json
 └── package.json
 ```
+
+## API-запросы
+
+Все API-вызовы фронтенда идут через префикс `/api/` (`/api/auth/login`, `/api/meetings/:id/files`). `next.config.js` проксирует `/api/:path*` на `http://localhost:3001/:path*` через rewrites. Префикс `/api/` обязателен — без него rewrite может перехватить page route (например, `/meetings/[id]`).
 
 ## Правила
 
@@ -50,11 +63,12 @@ apps/web/
 - **HeroUI v3** — используй `onPress` вместо `onClick` для лучшей доступности.
 - **HeroUI v3** — Provider не нужен (v3 не требует `<HeroUIProvider>`).
 - **HeroUI v3** — используй семантические варианты (`primary`, `secondary`, `tertiary`) вместо raw colors.
-- **HeroUI v3 Form** — не ставь `validationBehavior="aria"` на `<Form>` если не нужно real-time (вызывает ошибки при mount). Используй `validate` prop на每个 поле + нативную валидацию.
+- **HeroUI v3 Form** — не ставь `validationBehavior="aria"` на `<Form>` если не нужно real-time (вызывает ошибки при mount). Используй `validate` prop на каждом поле + нативную валидацию.
 - **HeroUI v3 Form** — все `<Input>` должны иметь `className="w-full"`. Форма: `<Form className="w-full">`.
 - **Навигация** — всегда `useRouter().push()`, никогда `window.location.href`.
-- **Доступность** — ошибки: `role="alert"` + `aria-live="polite"`. Формы: `aria-label`. Инпуты: `autoComplete`.
+- **Доступность** — ошибки: `role="alert"` + `aria-live="polite"`. Формы: `aria-label`. Инпуты: `autoComplete`. Интерактивные элементы ≥ 44×44 (`min-h-11`).
+- **ToastProvider** — placement принимает только RAC-значения: `"bottom end"` (не `"bottom-right"`).
 - Стили — CSS Modules, Tailwind или `globals.css`. Решение за автором — единообразие внутри фичи.
-- Изображения — `next/image` вместо `<img>`.
+- Изображения — `next/image` вместо `<img>`. Иконки — SVG (не emoji).
 - Ссылки — `next/link` / `useRouter` вместо `<a>`.
-- API-запросы — через серверные компоненты или Route Handlers, где возможно.
+- API-запросы — через префикс `/api/` + rewrites в `next.config.js` (не напрямую на :3001).

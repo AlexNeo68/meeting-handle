@@ -45,17 +45,21 @@ npm run build            # сборка обоих приложений
 meeting-ai/
 ├── apps/
 │   ├── api/          # NestJS бэкенд
-│   │   ├── src/
-│   │   │   ├── main.ts
-│   │   │   └── app.module.ts
-│   │   └── ...
-│   └── web/          # Next.js фронтенд
+│   │   └── src/
+│   │       ├── main.ts
+│   │       ├── app.module.ts
+│   │       ├── auth/        # CQRS (register/login)
+│   │       ├── user/        # /user/profile
+│   │       ├── meetings/    # CRUD встреч
+│   │       ├── files/       # загрузка/список/скачивание/просмотр/удаление файлов
+│   │       └── common/      # guards, filters
+│   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
 │       └── src/
-│           └── app/
-│               ├── layout.tsx
-│               ├── page.tsx
-│               └── globals.css
-├── package.json       # корень monorepo (workspaces)
+│           ├── app/         # /, /login, /signup, (authenticated)/meetings/[id]
+│           ├── components/  # file-upload UI, providers (Toast)
+│           └── contexts/    # auth-context (useAuth)
+├── design-system/           # ui-ux-pro-max master (палитра, типографика, токены)
+├── package.json             # корень monorepo (workspaces)
 └── ...
 ```
 

@@ -207,6 +207,57 @@ function validateTerms(isSelected: boolean): string | null {
 
 ---
 
+## Файлы и загрузка — паттерны (2026-07-31)
+
+Аудит `apps/web/src/components/file-upload/*` + страницы встречи `apps/web/src/app/(authenticated)/meetings/[id]/page.tsx`.
+
+### 12. Dropzone как `button` с `aria-label`
+
+**Проблема:** Вся зона дропа кликабельна, но div — недоступна с клавиатуры.
+
+**Решение:** Один `button` (не div) на весь dropzone + `aria-disabled` во время загрузки:
+
+```tsx
+<button
+  type="button"
+  onClick={openDialog}
+  aria-label="Загрузить файл"
+  aria-disabled={isUploading}
+  className="flex min-h-44 w-full ... border-2 border-dashed ..."
+>
+  <svg aria-hidden="true">...</svg>
+  <span>Перетащите файл сюда или нажмите, чтобы выбрать</span>
+  <span>PDF, DOC, аудио и видео до 100 МБ</span>
+</button>
+<input ref={inputRef} type="file" className="sr-only" tabIndex={-1} aria-hidden="true" />
+```
+
+Скрытый `input[type=file]` — `sr-only`, `tabIndex={-1}`, `aria-hidden="true"` (вызывается только программно через `ref.click()`).
+
+### 13. XHR-загрузка: ProgressBar с `aria-valuenow`
+
+**Решение:** `XMLHttpRequest` для честного прогресса (`xhr.upload.onprogress`), `ProgressBar.Root value={progress}` + `aria-label`, процент в `ProgressBar.Output`. Ошибки API парсятся из `xhr.responseText` и показываются через `toast.danger`.
+
+### 14. Удаление — `AlertDialog` с подтверждением
+
+**Решение:** HeroUI `AlertDialog.Root/Trigger/Container/Dialog/Header/Heading/Body/Footer` — деструктивное действие всегда через confirm-диалог с явным «Удалить». Кнопка удаления: `isDisabled`+`isPending` во время запроса.
+
+### 15. Blob-скачивание без смены страницы
+
+**Решение:** `fetch` → `res.blob()` → `URL.createObjectURL` → временный `<a download>` → клик → revoke. Кнопка получает `aria-label="Скачать файл"`.
+
+### 16. Skeleton-состояние загрузки списка
+
+**Решение:** Пока грузится список файлов — skeleton-строки (не спиннер на весь блок), empty state с CTA («Загрузить первый файл»), ошибка `role="alert"`.
+
+### 17. API-префикс `/api/` — конфликт с page route
+
+**Проблема:** Rewrite `/meetings/:path*` в `next.config.js` перехватывал page route `/meetings/[id]` — вместо страницы приходил 401 от API.
+
+**Решение:** Все API-вызовы фронтенда идут через префикс `/api/` (`/api/meetings/...`, `/api/auth/...`, `/api/user/...`), rewrites маппят `/api/*` на `localhost:3001/*`. Страничные маршруты больше не пересекаются с прокси.
+
+---
+
 ## Структура компонента — чеклист
 
 Перед отправкой UI-компонента проверить:
@@ -222,6 +273,12 @@ function validateTerms(isSelected: boolean): string | null {
 - [ ] Тексты на одном языке (без миксов)
 - [ ] Metadata страницы (title, description)
 - [ ] Password toggle: SVG + `aria-label` + `type="button"`
+- [ ] Интерактивные элементы ≥ 44×44 (min-h-11), контраст ≥ 4.5:1
+- [ ] Dropzone: `button` + `aria-label` + скрытый `input[type=file]`
+- [ ] Асинхронные операции: loading state (skeleton/progressbar) рядом с элементом
+- [ ] Деструктивные действия: confirm-диалог (`AlertDialog`)
+- [ ] Ошибки от API показываются через `toast.danger`, не только в консоли
+- [ ] API-вызовы идут через префикс `/api/` (не конфликтуют с page routes)
 - [ ] Lint и build проходят без ошибок
 
 ---
@@ -232,6 +289,14 @@ function validateTerms(isSelected: boolean): string | null {
 |------|----------|
 | `apps/web/src/app/signup/page.tsx` | Signup страница (аудит пройден) |
 | `apps/web/src/app/signup/layout.tsx` | Metadata для signup |
+| `apps/web/src/app/(authenticated)/page.tsx` | Список встреч (карточки-ссылки на `/meetings/[id]`) |
+| `apps/web/src/app/(authenticated)/meetings/[id]/page.tsx` | Страница встречи: инфо, участники, секция файлов |
+| `apps/web/src/components/file-upload/file-upload.tsx` | Dropzone + XHR-загрузка с прогрессом, валидация 100MB/MIME |
+| `apps/web/src/components/file-upload/file-list.tsx` | Список файлов: skeleton, empty state, error, refreshToken |
+| `apps/web/src/components/file-upload/file-item.tsx` | Строка файла: скачивание (blob), удаление (AlertDialog) |
+| `apps/web/src/components/providers.tsx` | ToastProvider (`placement="bottom end"`), AuthProvider |
+| `apps/web/src/contexts/auth-context.tsx` | Auth: login/register, token в localStorage |
+| `apps/web/next.config.js` | Rewrites `/api/*` → `localhost:3001/*` |
 | `apps/web/src/app/globals.css` | Глобальные стили (Tailwind + HeroUI) |
 | `apps/web/src/app/layout.tsx` | Root layout |
 
@@ -242,6 +307,7 @@ function validateTerms(isSelected: boolean): string | null {
 | Дата | Файл | Найдено | Исправлено |
 |------|------|---------|------------|
 | 2026-07-26 | `signup/page.tsx` | 15 проблем | 15 исправлений |
+| 2026-07-31 | `file-upload/*`, `meetings/[id]/page.tsx` | rewrite-конфликт `/meetings/:path*` ↔ `/meetings/[id]` | префикс `/api/` для всех API-вызовов |
 
 ### Все исправления (signup/page.tsx)
 
