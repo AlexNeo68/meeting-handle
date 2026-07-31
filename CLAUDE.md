@@ -135,3 +135,7 @@ npm run build -w apps/api   # сборка только api
 | `PostToolUse` | `Write` / `Edit` | Prettier — форматирование изменённого файла |
 
 Хук объявлен в `.claude/settings.json`. Срабатывает каждый раз, когда Claude создаёт или редактирует файл через `Write` или `Edit`. Если после правки форматирование съехало — Prettier автоматически поправит его.
+
+
+## Загрузка файлов на странице встречи
+Используй это исследование - docs/researches/research-file-upload.md

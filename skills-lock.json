@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "firecrawl-deep-research": {
+      "source": "firecrawl/firecrawl-workflows",
+      "sourceType": "github",
+      "skillPath": "skills/firecrawl-deep-research/SKILL.md",
+      "computedHash": "e9dfd2effe141e76f9cdabbccb041f302ffff8213edb42f04ddf02397fcc82cc"
+    },
     "git-commit": {
       "source": "github/awesome-copilot",
       "sourceType": "github",
