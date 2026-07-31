@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, Spinner } from '@heroui/react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 
@@ -91,7 +92,12 @@ export default function HomePage() {
             <Card key={meeting.id}>
               <Card.Content className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-base font-medium">{meeting.title}</h2>
+                  <Link
+                    href={`/meetings/${meeting.id}`}
+                    className="text-base font-medium text-foreground underline-offset-4 hover:underline"
+                  >
+                    {meeting.title}
+                  </Link>
                   <p className="mt-1 text-sm text-muted">{formatDate(meeting.date)}</p>
                 </div>
                 {meeting.participants.length > 0 && (
