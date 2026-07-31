@@ -62,8 +62,8 @@ meeting-ai/
 │   │       └── common/      # guards, filters
 │   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
 │       ├── src/
-│       │   ├── app/         # /, /login, /signup, (authenticated)/meetings/[id]
-│       │   ├── components/  # file-upload UI (upload/list/item/preview/icon), providers (Toast)
+│       │   ├── app/         # /, /login, /signup, (authenticated) (создание + список встреч), (authenticated)/meetings/[id]
+│       │   ├── components/  # create-meeting-form, file-upload UI (upload/list/item/preview/icon), providers (Toast)
 │       │   ├── contexts/    # auth-context (useAuth)
 │       │   └── lib/         # format-date.ts, format-file-size.ts (общие форматтеры)
 │       └── e2e/             # Playwright e2e-тесты (file-upload.spec.ts)

@@ -47,9 +47,10 @@ apps/web/
 │   │   ├── signup/             # /signup (page + layout с metadata)
 │   │   └── (authenticated)/    # страницы под авторизацией
 │   │       ├── layout.tsx      # проверка токена, header с выходом
-│   │       ├── page.tsx        # список встреч (карточки-ссылки)
+│   │       ├── page.tsx        # создание встречи (форма) + список встреч (карточки-ссылки)
 │   │       └── meetings/[id]/  # страница встречи: инфо, участники, файлы
 │   ├── components/
+│   │   ├── create-meeting-form.tsx # форма создания встречи (POST /api/meetings)
 │   │   ├── file-upload/        # file-upload, file-list, file-item, file-preview, file-icon, index
 │   │   └── providers.tsx       # AuthProvider + ToastProvider
 │   ├── contexts/
