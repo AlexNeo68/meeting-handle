@@ -31,6 +31,9 @@ npm run build            # сборка shared + обоих приложений
 | `npm run test`         | Тесты web + api (unit)                            |
 | `npm run test:web`     | Тесты только web (Vitest)                         |
 | `npm run test:api`     | Тесты только api (Jest, unit)                     |
+| `npm run test:e2e`     | E2E: api (Jest, supertest) + web (Playwright)     |
+| `npm run test:e2e:api` | E2E только api (`apps/api/test/*.e2e-spec.ts`)    |
+| `npm run test:e2e:web` | E2E только web (`apps/web/e2e/`, Playwright)      |
 | `npm run lint`         | ESLint по всем файлам `apps/**/*.{ts,tsx}`        |
 | `npm run format`       | Prettier — форматирование                         |
 | `npm run format:check` | Prettier — проверка без записи                    |
@@ -58,14 +61,16 @@ meeting-ai/
 │   │       ├── files/       # загрузка/список/скачивание/просмотр/удаление файлов
 │   │       └── common/      # guards, filters
 │   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
-│       └── src/
-│           ├── app/         # /, /login, /signup, (authenticated)/meetings/[id]
-│           ├── components/  # file-upload UI (upload/list/item/preview/icon), providers (Toast)
-│           ├── contexts/    # auth-context (useAuth)
-│           └── lib/         # format-date.ts, format-file-size.ts (общие форматтеры)
+│       ├── src/
+│       │   ├── app/         # /, /login, /signup, (authenticated)/meetings/[id]
+│       │   ├── components/  # file-upload UI (upload/list/item/preview/icon), providers (Toast)
+│       │   ├── contexts/    # auth-context (useAuth)
+│       │   └── lib/         # format-date.ts, format-file-size.ts (общие форматтеры)
+│       └── e2e/             # Playwright e2e-тесты (file-upload.spec.ts)
 ├── packages/
-│   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы)
+│   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы), getFileKind
 ├── design-system/           # ui-ux-pro-max master (палитра, типографика, токены)
+├── playwright.config.ts     # конфиг web e2e (webServer api+web, reuseExistingServer)
 ├── package.json             # корень monorepo (workspaces)
 └── ...
 ```

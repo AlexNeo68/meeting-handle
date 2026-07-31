@@ -22,7 +22,17 @@ npm run lint      # next lint
 ```bash
 npm run dev:web   # npm run dev -w apps/web
 npm run build:web # npm run build -w apps/web
+npm run test:web  # vitest run (unit, src/**/*.spec.tsx)
 ```
+
+## E2E (Playwright)
+
+```bash
+npm run test:e2e:web   # npx playwright test (конфиг в корне repo)
+```
+
+- `playwright.config.ts` в корне repo: `testDir ./apps/web/e2e`, baseURL `http://localhost:3000`, два `webServer` (`dev:api` → готовность `GET /meetings` = 401, `dev:web` → `GET /login` = 200), `reuseExistingServer: true` — подхватывает уже запущенные dev-серверы.
+- Спеки: `apps/web/e2e/*.spec.ts`. Исключены из Vitest через `exclude: ['e2e/**', ...]` в `vitest.config.ts`.
 
 ## Структура
 
@@ -46,8 +56,9 @@ apps/web/
 │   │   └── auth-context.tsx    # useAuth(): token/user/login/logout
 │   ├── lib/
 │   │   ├── format-date.ts      # общий форматтер дат (formatDate)
-│   │   └── format-file-size.ts # общий форматтер размеров (formatFileSize)
+│   │   └── format-file-size.ts # общий форматтер размеров (formatFileSize, B/KB/MB/GB/TB)
 │   └── test-setup.ts           # vitest setup (jsdom, localStorage)
+├── e2e/                        # Playwright e2e-спеки (file-upload.spec.ts)
 ├── next.config.js              # rewrites /api/* → http://localhost:3001/*
 ├── postcss.config.mjs          # PostCSS (Tailwind CSS v4)
 ├── tsconfig.json

@@ -262,11 +262,11 @@ function validateTerms(isSelected: boolean): string | null {
 
 ### 19. Иконки типов файлов — SVG + `sr-only` label
 
-**Решение:** `FileTypeIcon` (`apps/web/src/components/file-upload/file-icon.tsx`) — inline SVG по MIME-типу (audio/video/pdf/doc/file) с атрибутом `data-file-type` для тестов, `aria-hidden="true"` на `<svg>` + `sr-only` span с человекочитаемым label (`fileTypeLabel()`: «Аудиофайл», «Видеофайл», «PDF-документ», «Документ», «Файл»). Иконка декоративная, доступность несёт текст.
+**Решение:** `FileTypeIcon` (`apps/web/src/components/file-upload/file-icon.tsx`) — inline SVG по `FileKind` (audio/video/pdf/doc/other) из `@meeting-ai/shared` (`getFileKind(mime)`). Единая карта `FILE_TYPE_META` (label + glyph), общий `FILE_GLYPH` для документов, атрибут `data-file-type={kind}` для тестов, `aria-hidden="true"` на `<svg>` + `sr-only` span с человекочитаемым label (`fileTypeLabel()`: «Аудиофайл», «Видеофайл», «PDF-документ», «Документ», «Файл`). Проп `hideLabel` — когда иконка уже сопровождается видимым текстом (например, в preview). Иконка декоративная, доступность несёт текст.
 
 ### 20. `formatFileSize` — единый форматтер размеров
 
-**Решение:** `apps/web/src/lib/format-file-size.ts` — `formatFileSize(bytes, locale='ru-RU')`, единицы Б/КБ/МБ/ГБ/ТБ через `Intl.NumberFormat`. Возвращает `''` для невалидных значений. Не дублировать форматтер по компонентам.
+**Решение:** `apps/web/src/lib/format-file-size.ts` — `formatFileSize(bytes)` (без locale): латинские единицы B/KB/MB/GB/TB, десятичная точка, обрезка `.0` (`1.5 KB`, `23 MB`). Возвращает `''` для невалидных значений. Не дублировать форматтер по компонентам (в UI показывать через него, а не «КБ/МБ» вручную).
 
 ### 21. Indeterminate-фаза после загрузки
 
@@ -274,7 +274,7 @@ function validateTerms(isSelected: boolean): string | null {
 
 ### 22. Preview для всех типов файлов
 
-**Решение:** Кнопка «Просмотреть» — для каждого файла (`aria-expanded` + `aria-controls`). Медиа — inline player, документы — блок с `FileTypeIcon`, именем и размером. Нет «мёртвых» иконок-бездействий.
+**Решение:** Кнопка «Просмотреть» — для каждого файла (`aria-expanded` + `aria-controls`). Медиа — inline player, документы — блок с `FileTypeIcon` и именем файла (без размера). Для не-media **не** делается blob-`fetch` (ранний return в `useEffect`) — документ превьюится только локальной иконкой. Нет «мёртвых» иконок-бездействий.
 
 ---
 
@@ -302,9 +302,9 @@ function validateTerms(isSelected: boolean): string | null {
 - [ ] Lint и build проходят без ошибок
 - [ ] Media preview: `figure`/`figcaption`, blob URL + revoke, `preload="metadata"`
 - [ ] Иконки типов: inline SVG `aria-hidden` + `sr-only` label (не emoji)
-- [ ] Формат размеров через общий `formatFileSize` (Б/КБ/МБ/ГБ/ТБ)
+- [ ] Формат размеров через общий `formatFileSize` (B/KB/MB/GB/TB)
 - [ ] Двухфазный прогресс: `isIndeterminate` на время обработки после загрузки
-- [ ] Preview доступен для всех типов файлов (документы — иконка+имя+размер)
+- [ ] Preview доступен для всех типов файлов (документы — иконка+имя, без blob-фетча)
 
 ---
 
@@ -319,10 +319,12 @@ function validateTerms(isSelected: boolean): string | null {
 | `apps/web/src/components/file-upload/file-upload.tsx` | Dropzone + XHR-загрузка с прогрессом, валидация 100MB/MIME (константы из `@meeting-ai/shared`) |
 | `apps/web/src/components/file-upload/file-list.tsx` | Список файлов: skeleton, empty state, error, refreshToken |
 | `apps/web/src/components/file-upload/file-item.tsx` | Строка файла: скачивание (blob), удаление (AlertDialog), inline preview |
-| `apps/web/src/components/file-upload/file-preview.tsx` | Audio/video inline player (blob URL + revoke) / документ: иконка+имя+размер, error state |
-| `apps/web/src/components/file-upload/file-icon.tsx` | `FileTypeIcon` (SVG по MIME) + `fileTypeLabel` |
-| `apps/web/src/lib/format-file-size.ts` | Общий `formatFileSize` (Б/КБ/МБ/ГБ/ТБ) |
+| `apps/web/src/components/file-upload/file-preview.tsx` | Audio/video inline player (blob URL + revoke) / документ: иконка+имя (без blob-фетча), error state |
+| `apps/web/src/components/file-upload/file-icon.tsx` | `FileTypeIcon` (SVG по `FileKind` из `@meeting-ai/shared`) + `fileTypeLabel`, проп `hideLabel` |
+| `apps/web/src/lib/format-file-size.ts` | Общий `formatFileSize` (B/KB/MB/GB/TB) |
 | `apps/web/src/lib/format-date.ts` | Общий `formatDate` (используется на страницах встреч и списка) |
+| `playwright.config.ts` | E2E-конфиг (root): 2 webServer (api :3001, web :3000), `reuseExistingServer` |
+| `apps/web/e2e/file-upload.spec.ts` | Playwright e2e: upload→preview→download→delete + клиентская валидация |
 | `apps/web/src/components/providers.tsx` | ToastProvider (`placement="bottom end"`), AuthProvider |
 | `apps/web/src/contexts/auth-context.tsx` | Auth: login/register, token в localStorage |
 | `apps/web/next.config.js` | Rewrites `/api/*` → `localhost:3001/*` |
@@ -339,6 +341,7 @@ function validateTerms(isSelected: boolean): string | null {
 | 2026-07-31 | `file-upload/*`, `meetings/[id]/page.tsx` | rewrite-конфликт `/meetings/:path*` ↔ `/meetings/[id]` | префикс `/api/` для всех API-вызовов |
 | 2026-07-31 | `file-upload/*` (code review) | RU-aria-labels с миксами языков, нет `aria-live`, touch targets < 44px, дубли `formatDate` и MIME-констант | RU-aria-labels с именем файла, `aria-live="polite"` на ошибках, `min-h-11` на интерактиве, общий `format-date.ts`, `@meeting-ai/shared` |
 | 2026-07-31 | `file-upload/*` (P2 polish, issue #6) | preview только для медиа, дубли `formatBytes`/иконок, нет индикации «обработки» после загрузки | `file-preview.tsx` для всех типов, `file-icon.tsx` + `format-file-size.ts`, `isIndeterminate` прогресс |
+| 2026-07-31 | `file-upload/*` (code review #6 fixes) | дублирование MIME-констант в `file-icon.tsx`, кириллические единицы/`.0` в размерах, blob-фетч для документов, неоднозначный progress | `getFileKind`/`FileKind` в `@meeting-ai/shared`, `formatFileSize` → B/KB/MB/GB/TB, ранний return в preview для не-media, `value={undefined}` в indeterminate, e2e (backend+frontend) |
 
 ### Все исправления (signup/page.tsx)
 
