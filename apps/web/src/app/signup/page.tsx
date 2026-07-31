@@ -105,7 +105,7 @@ function SignupForm() {
     setError(null);
 
     try {
-      const res = await fetch('/auth/register', {
+      const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -119,7 +119,7 @@ function SignupForm() {
 
       localStorage.setItem('token', data.token);
 
-      const profileRes = await fetch('/user/profile', {
+      const profileRes = await fetch('/api/user/profile', {
         headers: { Authorization: `Bearer ${data.token}` },
       });
 

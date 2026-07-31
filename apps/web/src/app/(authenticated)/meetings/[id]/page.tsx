@@ -3,8 +3,10 @@
 import { Button, Card, Spinner } from '@heroui/react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import FileList from '@/components/file-upload/file-list';
+import FileUpload, { type FileUploadHandle } from '@/components/file-upload/file-upload';
 
 interface Meeting {
   id: string;
@@ -34,11 +36,13 @@ export default function MeetingDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [filesVersion, setFilesVersion] = useState(0);
+  const uploadRef = useRef<FileUploadHandle>(null);
 
   useEffect(() => {
     async function fetchMeeting() {
       try {
-        const res = await fetch(`/meetings/${meetingId}`, {
+        const res = await fetch(`/api/meetings/${meetingId}`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -150,11 +154,18 @@ export default function MeetingDetailPage() {
 
       <section aria-label="Файлы встречи" className="mt-8">
         <h2 className="mb-3 text-lg font-semibold">Файлы</h2>
-        <Card className="px-6 py-10 text-center">
-          <p className="text-sm text-muted">
-            Здесь появятся файлы встречи. Раздел будет доступен после подключения загрузки.
-          </p>
-        </Card>
+        <FileUpload
+          ref={uploadRef}
+          meetingId={meetingId}
+          onUploaded={() => setFilesVersion((version) => version + 1)}
+        />
+        <div className="mt-6">
+          <FileList
+            meetingId={meetingId}
+            refreshToken={filesVersion}
+            onRequestUpload={() => uploadRef.current?.openDialog()}
+          />
+        </div>
       </section>
     </div>
   );

@@ -33,7 +33,7 @@ export default function HomePage() {
   useEffect(() => {
     async function fetchMeetings() {
       try {
-        const res = await fetch('/meetings', {
+        const res = await fetch('/api/meetings', {
           headers: {
             Authorization: `Bearer ${token}`,
           },

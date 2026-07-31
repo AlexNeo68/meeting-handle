@@ -239,7 +239,9 @@ graph TD
 
 ### API URL convention
 
-The PRD specifies `/api/v1/meetings/:meetingId/files`. The existing API uses flat paths (`/meetings`, `/auth/login`). The Next.js proxy in `next.config.js` already maps `/meetings/:path*` to `http://localhost:3001/meetings/:path*`. Decision: **use `/meetings/:meetingId/files`** (no v1 prefix) for consistency with the existing API and zero proxy config changes.
+The PRD specifies `/api/v1/meetings/:meetingId/files`. The existing API uses flat paths (`/meetings`, `/auth/login`). The Next.js proxy in `next.config.js` maps the `/api/` prefix to the API: `/api/meetings/:path*` → `http://localhost:3001/meetings/:path*`. Decision: **use `/meetings/:meetingId/files`** (no v1 prefix) for consistency with the existing API, and call it from the web app via the `/api/` prefix (`/api/meetings/:meetingId/files`).
+
+> **Why the `/api/` prefix:** the meeting detail page lives at `/meetings/[id]`, which collides with the API rewrite `/meetings/:path*` — the rewrite swallowed the page route and returned the API's 401 instead of the page. Moving the proxy under `/api/` keeps page routes (`/meetings/[id]`) free of collisions.
 
 ### Ownership model
 
@@ -261,8 +263,10 @@ Files module follows the **Service pattern** (not CQRS), matching the Meetings m
 
 ### Next.js proxy note
 
-The files API endpoints `/meetings/:meetingId/files` will be automatically proxied by the existing rewrite rule:
+The files API endpoints are proxied by the `/api/` rewrite rules in `next.config.js`:
 ```js
-{ source: '/meetings/:path*', destination: 'http://localhost:3001/meetings/:path*' }
+{ source: '/api/meetings/:path*', destination: 'http://localhost:3001/meetings/:path*' }
+{ source: '/api/auth/:path*', destination: 'http://localhost:3001/auth/:path*' }
+{ source: '/api/user/:path*', destination: 'http://localhost:3001/user/:path*' }
 ```
-No changes to `next.config.js` needed.
+All web app fetches use the `/api/` prefix so they never collide with page routes (e.g. `/meetings/[id]`).

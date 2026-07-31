@@ -20,3 +20,6 @@ Thumbs.db
 
 # Uploaded files (user content, not served statically)
 apps/api/uploads/
+
+# Playwright MCP artifacts
+.playwright-mcp/

@@ -38,7 +38,7 @@ describe('AuthContext', () => {
     expect(result.current.token).toBe(mockToken);
   });
 
-  it('login calls POST /auth/login then GET /user/profile and stores token', async () => {
+  it('login calls POST /api/auth/login then GET /api/user/profile and stores token', async () => {
     vi.stubGlobal(
       'fetch',
       vi
@@ -59,13 +59,13 @@ describe('AuthContext', () => {
       await result.current.login('test@example.com', 'password123');
     });
 
-    expect(fetch).toHaveBeenCalledWith('/auth/login', {
+    expect(fetch).toHaveBeenCalledWith('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email: 'test@example.com', password: 'password123' }),
     });
 
-    expect(fetch).toHaveBeenCalledWith('/user/profile', {
+    expect(fetch).toHaveBeenCalledWith('/api/user/profile', {
       headers: { Authorization: `Bearer ${mockToken}` },
     });
 
