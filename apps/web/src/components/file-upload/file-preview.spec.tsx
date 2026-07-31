@@ -88,7 +88,10 @@ describe('FilePreview', () => {
     expect(container.querySelector('video')).toHaveAttribute('src', 'blob:media');
   });
 
-  it('renders a document icon block for non-media files', () => {
+  it('renders a document icon block for non-media files without fetching a preview', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
     const { container } = render(
       <FilePreview
         file={makeFile('application/pdf', 'заметки.pdf')}
@@ -98,9 +101,9 @@ describe('FilePreview', () => {
     );
 
     expect(screen.getByText('заметки.pdf')).toBeInTheDocument();
-    expect(screen.getByText('1 КБ')).toBeInTheDocument();
-    expect(screen.getByText('PDF-документ')).toBeInTheDocument();
     expect(container.querySelector('svg')).toHaveAttribute('data-file-type', 'pdf');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(screen.queryByText(/KB|КБ|MB|МБ/)).not.toBeInTheDocument();
   });
 
   it('shows an error alert when the preview request fails', async () => {

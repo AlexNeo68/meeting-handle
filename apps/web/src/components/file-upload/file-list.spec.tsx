@@ -99,8 +99,8 @@ describe('FileList', () => {
 
     expect(screen.getByText('заметки.pdf')).toBeInTheDocument();
     expect(screen.getByText('запись.mp4')).toBeInTheDocument();
-    expect(screen.getByText(/2 КБ/)).toBeInTheDocument();
-    expect(screen.getByText(/5 МБ/)).toBeInTheDocument();
+    expect(screen.getByText(/2 KB/)).toBeInTheDocument();
+    expect(screen.getByText(/5 MB/)).toBeInTheDocument();
   });
 
   it('triggers download and creates a blob link', async () => {

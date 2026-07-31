@@ -183,7 +183,7 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
 
         {isUploading && (
           <ProgressBar.Root
-            value={progress}
+            value={isProcessing ? undefined : progress}
             isIndeterminate={isProcessing}
             aria-label={isProcessing ? 'Обработка файла' : 'Загрузка файла'}
             className="w-full"

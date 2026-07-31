@@ -1,64 +1,72 @@
 'use client';
 
-const DOC_MIME = /^(application\/msword|application\/vnd\.openxmlformats-officedocument\.)/;
+import { getFileKind, type FileKind } from '@meeting-ai/shared';
+import type { ReactNode } from 'react';
 
-export function fileTypeLabel(mimeType: string): string {
-  if (mimeType.startsWith('audio/')) return 'Аудиофайл';
-  if (mimeType.startsWith('video/')) return 'Видеофайл';
-  if (mimeType === 'application/pdf') return 'PDF-документ';
-  if (DOC_MIME.test(mimeType)) return 'Документ';
-  return 'Файл';
-}
+const FILE_GLYPH = (
+  <>
+    <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+    <path d="M14 2v4h4" />
+  </>
+);
 
-interface FileTypeIconProps {
-  mimeType: string;
-  className?: string;
-}
-
-export function FileTypeIcon({ mimeType, className }: FileTypeIconProps) {
-  let type = 'file';
-  let paths: React.ReactNode = (
-    <>
-      <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-      <path d="M14 2v4h4" />
-    </>
-  );
-
-  if (mimeType.startsWith('audio/')) {
-    type = 'audio';
-    paths = (
+const FILE_TYPE_META: Record<FileKind, { label: string; icon: ReactNode }> = {
+  audio: {
+    label: 'Аудиофайл',
+    icon: (
       <>
         <path d="M9 18V6l10-2v12" />
         <path d="M5 16a3 3 0 1 0 4 0V8" />
         <path d="M15 14a3 3 0 1 0 4 0V8" />
       </>
-    );
-  } else if (mimeType.startsWith('video/')) {
-    type = 'video';
-    paths = (
+    ),
+  },
+  video: {
+    label: 'Видеофайл',
+    icon: (
       <>
         <rect x="3" y="5" width="14" height="14" rx="2" />
         <path d="M17 10l4-2v8l-4-2" />
       </>
-    );
-  } else if (mimeType === 'application/pdf') {
-    type = 'pdf';
-    paths = (
+    ),
+  },
+  pdf: {
+    label: 'PDF-документ',
+    icon: (
       <>
-        <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+        {FILE_GLYPH}
         <path d="M8 12h8M8 15h5M8 9h3" />
       </>
-    );
-  } else if (DOC_MIME.test(mimeType)) {
-    type = 'doc';
-    paths = (
+    ),
+  },
+  doc: {
+    label: 'Документ',
+    icon: (
       <>
-        <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-        <path d="M14 2v4h4" />
+        {FILE_GLYPH}
         <path d="M8 12h8M8 15h8" />
       </>
-    );
-  }
+    ),
+  },
+  other: {
+    label: 'Файл',
+    icon: FILE_GLYPH,
+  },
+};
+
+export function fileTypeLabel(mimeType: string): string {
+  return FILE_TYPE_META[getFileKind(mimeType)].label;
+}
+
+interface FileTypeIconProps {
+  mimeType: string;
+  className?: string;
+  hideLabel?: boolean;
+}
+
+export function FileTypeIcon({ mimeType, className, hideLabel }: FileTypeIconProps) {
+  const kind = getFileKind(mimeType);
+  const meta = FILE_TYPE_META[kind];
 
   return (
     <>
@@ -71,11 +79,11 @@ export function FileTypeIcon({ mimeType, className }: FileTypeIconProps) {
         strokeWidth="1.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        data-file-type={type}
+        data-file-type={kind}
       >
-        {paths}
+        {meta.icon}
       </svg>
-      <span className="sr-only">{fileTypeLabel(mimeType)}</span>
+      {!hideLabel && <span className="sr-only">{meta.label}</span>}
     </>
   );
 }
