@@ -14,7 +14,7 @@ Meeting AI — монолитное приложение для обработк
 ```bash
 npm install              # установка зависимостей (workspaces)
 npm run dev              # запуск web (port 3000) + api (port 3001)
-npm run build            # сборка обоих приложений
+npm run build            # сборка shared + обоих приложений
 ```
 
 ## Доступные скрипты
@@ -24,9 +24,13 @@ npm run build            # сборка обоих приложений
 | `npm run dev`          | Запуск web и api параллельно через `concurrently` |
 | `npm run dev:web`      | Только frontend                                   |
 | `npm run dev:api`      | Только backend                                    |
-| `npm run build`        | Сборка обоих приложений                           |
+| `npm run build`        | Сборка shared + обоих приложений                  |
+| `npm run build:shared` | Сборка `@meeting-ai/shared` (`packages/shared`)   |
 | `npm run build:web`    | Только web                                        |
 | `npm run build:api`    | Только api                                        |
+| `npm run test`         | Тесты web + api (unit)                            |
+| `npm run test:web`     | Тесты только web (Vitest)                         |
+| `npm run test:api`     | Тесты только api (Jest, unit)                     |
 | `npm run lint`         | ESLint по всем файлам `apps/**/*.{ts,tsx}`        |
 | `npm run format`       | Prettier — форматирование                         |
 | `npm run format:check` | Prettier — проверка без записи                    |
@@ -56,8 +60,11 @@ meeting-ai/
 │   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
 │       └── src/
 │           ├── app/         # /, /login, /signup, (authenticated)/meetings/[id]
-│           ├── components/  # file-upload UI, providers (Toast)
-│           └── contexts/    # auth-context (useAuth)
+│           ├── components/  # file-upload UI (upload/list/item/preview), providers (Toast)
+│           ├── contexts/    # auth-context (useAuth)
+│           └── lib/         # format-date.ts (общий форматтер дат)
+├── packages/
+│   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы)
 ├── design-system/           # ui-ux-pro-max master (палитра, типографика, токены)
 ├── package.json             # корень monorepo (workspaces)
 └── ...

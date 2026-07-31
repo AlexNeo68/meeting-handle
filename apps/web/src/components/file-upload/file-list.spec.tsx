@@ -94,7 +94,7 @@ describe('FileList', () => {
     renderList();
 
     await waitFor(() => {
-      expect(screen.getByRole('list', { name: 'Meeting files' })).toBeInTheDocument();
+      expect(screen.getByRole('list', { name: 'Файлы встречи' })).toBeInTheDocument();
     });
 
     expect(screen.getByText('заметки.pdf')).toBeInTheDocument();
@@ -128,10 +128,10 @@ describe('FileList', () => {
     renderList({ fetchImpl: fetchMock as unknown as typeof fetch });
 
     await waitFor(() => {
-      expect(screen.getByRole('list', { name: 'Meeting files' })).toBeInTheDocument();
+      expect(screen.getByRole('list', { name: 'Файлы встречи' })).toBeInTheDocument();
     });
 
-    const downloadButton = screen.getAllByLabelText('Скачать файл')[0];
+    const downloadButton = screen.getAllByRole('button', { name: /^Скачать / })[0];
     fireEvent.click(downloadButton);
 
     await waitFor(() => {
@@ -165,10 +165,10 @@ describe('FileList', () => {
     renderList({ fetchImpl: fetchMock as unknown as typeof fetch });
 
     await waitFor(() => {
-      expect(screen.getByRole('list', { name: 'Meeting files' })).toBeInTheDocument();
+      expect(screen.getByRole('list', { name: 'Файлы встречи' })).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getAllByLabelText('Удалить файл')[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^Удалить / })[0]);
 
     const dialog = await screen.findByRole('alertdialog');
     expect(within(dialog).getByText('Удалить файл?')).toBeInTheDocument();

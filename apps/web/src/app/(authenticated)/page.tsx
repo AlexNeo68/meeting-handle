@@ -4,6 +4,7 @@ import { Card, Spinner } from '@heroui/react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { formatDate } from '@/lib/format-date';
 
 interface Meeting {
   id: string;
@@ -13,15 +14,6 @@ interface Meeting {
   userId: string;
   createdAt: string;
   updatedAt: string;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 }
 
 export default function HomePage() {
@@ -70,6 +62,7 @@ export default function HomePage() {
       <div className="mx-auto max-w-3xl px-4 py-10">
         <div
           role="alert"
+          aria-live="polite"
           className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
         >
           {error}

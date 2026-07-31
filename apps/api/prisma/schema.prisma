@@ -8,12 +8,13 @@ datasource db {
 }
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique
+  id        String        @id @default(uuid())
+  email     String        @unique
   password  String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
   meetings  Meeting[]
+  files     MeetingFile[]
 }
 
 model Meeting {
@@ -30,7 +31,7 @@ model Meeting {
 
 model MeetingFile {
   id           String   @id @default(uuid(7))
-  storageName  String   @unique
+  storagePath  String   @unique
   originalName String
   mimeType     String
   size         Int
@@ -38,6 +39,7 @@ model MeetingFile {
   meetingId    String
   userId       String
   meeting      Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [userId], references: [id])
 
   @@index([userId, meetingId])
   @@index([meetingId])

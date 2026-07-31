@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import FileList from '@/components/file-upload/file-list';
 import FileUpload, { type FileUploadHandle } from '@/components/file-upload/file-upload';
+import { formatDate } from '@/lib/format-date';
 
 interface Meeting {
   id: string;
@@ -16,15 +17,6 @@ interface Meeting {
   userId: string;
   createdAt: string;
   updatedAt: string;
-}
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('ru-RU', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 }
 
 export default function MeetingDetailPage() {
@@ -110,7 +102,7 @@ export default function MeetingDetailPage() {
         >
           {error}
         </div>
-        <Button className="mt-6" variant="secondary" onPress={() => router.push('/')}>
+        <Button className="mt-6 min-h-11" variant="secondary" onPress={() => router.push('/')}>
           Назад
         </Button>
       </div>

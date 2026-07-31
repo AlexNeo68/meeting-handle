@@ -1,27 +1,11 @@
 'use client';
 
+import { ACCEPT_ATTR, isAllowedMime, MAX_FILE_SIZE } from '@meeting-ai/shared';
 import { Button, ProgressBar, Spinner, toast } from '@heroui/react';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 
-export const MAX_FILE_SIZE = 100 * 1024 * 1024;
-
-const ALLOWED_MIME_TYPES = ['application/msword', 'application/pdf'];
-const ALLOWED_MIME_PREFIXES = [
-  'audio/',
-  'video/',
-  'application/vnd.openxmlformats-officedocument.',
-];
-
-export const ACCEPT_ATTR =
-  'application/pdf,application/msword,audio/*,video/*,application/vnd.openxmlformats-officedocument.*';
-
-export function isAllowedMime(mime: string): boolean {
-  return (
-    ALLOWED_MIME_TYPES.includes(mime) ||
-    ALLOWED_MIME_PREFIXES.some((prefix) => mime.startsWith(prefix))
-  );
-}
+export { ACCEPT_ATTR, isAllowedMime, MAX_FILE_SIZE };
 
 export interface MeetingFile {
   id: string;
@@ -174,7 +158,8 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
 
       <div className="mt-4 flex flex-col items-center gap-3">
         <Button
-          aria-label="Upload file"
+          aria-label="Загрузить файл"
+          className="min-h-11"
           isDisabled={isUploading}
           isPending={isUploading}
           onPress={openDialog}
@@ -198,7 +183,12 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
       </div>
 
       {validationError && (
-        <p id="file-upload-error" role="alert" className="mt-3 text-sm text-danger">
+        <p
+          id="file-upload-error"
+          role="alert"
+          aria-live="polite"
+          className="mt-3 text-sm text-danger"
+        >
           {validationError}
         </p>
       )}

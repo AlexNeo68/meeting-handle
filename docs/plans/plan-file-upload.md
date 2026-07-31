@@ -247,9 +247,10 @@ The PRD specifies `/api/v1/meetings/:meetingId/files`. The existing API uses fla
 
 ```
 User ──has──> Meeting ──has──> File
+User ──has──> File (direct relation, userId)
 ```
 
-All file operations check: "Does the meeting with `meetingId` belong to the requesting user?" This reuses the same query pattern as `MeetingService.findOne()` (Prisma `findFirst` with `{ where: { id, userId } }`). No need to check file-level ownership separately — meeting-level ownership implies file-level ownership.
+Файлы хранят `userId` напрямую (relation File → User). Ownership-проверка выполняется на уровне файла: `findFirst({ where: { id: fileId, meetingId, userId } })` — файл должен принадлежать и запрошенной встрече, и запрошенному пользователю. Это закрывает и случай «чужой файл в своей встрече» (например, если fileId подменён).
 
 ### Module pattern
 

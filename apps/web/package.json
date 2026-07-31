@@ -13,6 +13,7 @@
   "dependencies": {
     "@heroui/react": "^3.2.2",
     "@heroui/styles": "^3.2.2",
+    "@meeting-ai/shared": "*",
     "@tailwindcss/postcss": "^4.3.3",
     "next": "^15.5.22",
     "postcss": "^8.4.31",

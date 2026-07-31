@@ -4,13 +4,15 @@
   "private": true,
   "description": "Meeting AI — monorepo with Next.js frontend and NestJS backend",
   "workspaces": [
-    "apps/*"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "concurrently -n web,api -c blue,green \"npm run dev:web\" \"npm run dev:api\"",
     "dev:web": "npm run dev -w apps/web",
     "dev:api": "npm run dev -w apps/api",
-    "build": "npm run build -w apps/web && npm run build -w apps/api",
+    "build": "npm run build:shared && npm run build -w apps/web && npm run build -w apps/api",
+    "build:shared": "npm run build -w @meeting-ai/shared",
     "build:web": "npm run build -w apps/web",
     "build:api": "npm run build -w apps/api",
     "lint": "eslint \"apps/**/*.{ts,tsx}\"",
@@ -19,7 +21,7 @@
     "test": "npm run test -w apps/web && npm run test -w apps/api",
     "test:web": "npm run test -w apps/web",
     "test:api": "npm run test -w apps/api",
-    "prepare": "husky"
+    "prepare": "husky && npm run build:shared"
   },
   "overrides": {
     "react": "^19.0.0",

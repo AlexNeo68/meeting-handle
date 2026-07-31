@@ -83,7 +83,7 @@ describe('FileUpload', () => {
   it('renders upload zone and button', () => {
     renderUpload();
 
-    expect(screen.getByLabelText('Upload file')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Загрузить файл')).toHaveLength(2);
     expect(screen.getByText(/Перетащите файл сюда/)).toBeInTheDocument();
     expect(document.querySelector('input[type="file"]')).toHaveAttribute('accept');
   });
@@ -131,6 +131,15 @@ describe('FileUpload', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent(/слишком большой/i);
     expect(FakeXMLHttpRequest.instances).toHaveLength(0);
+  });
+
+  it('exposes validation error to screen readers via aria-live', () => {
+    renderUpload();
+
+    selectFile(makeFile('big.mp4', 'video/mp4', MAX_FILE_SIZE + 1));
+
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveAttribute('aria-live', 'polite');
   });
 
   it('shows type validation error for unsupported mime types', () => {

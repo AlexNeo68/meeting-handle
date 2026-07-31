@@ -8,12 +8,11 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { createReadStream } from 'node:fs';
-import { unlink } from 'node:fs/promises';
-import { basename, resolve, sep } from 'node:path';
+import { stat, unlink } from 'node:fs/promises';
+import { basename, join, resolve, sep } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service';
 import { isAllowedMime, MIME_TYPE_DETECTOR, UPLOAD_DIR } from './files.constants';
 import { MimeTypeDetector } from './mime-type-detector';
-import { sanitizeOriginalName } from './file-name.util';
 
 @Injectable()
 export class FilesService {
@@ -26,32 +25,44 @@ export class FilesService {
   ) {}
 
   async upload(file: Express.Multer.File, meetingId: string, userId: string) {
-    await this.requireOwnedMeeting(meetingId, userId);
-
-    const detected = await this.detector.detect(file.path);
-    if (!detected || !isAllowedMime(detected)) {
-      await unlink(file.path).catch(() => undefined);
-      throw new BadRequestException('File content does not match allowed types');
+    if (!file) {
+      throw new BadRequestException('File is required');
     }
 
-    const record = await this.prisma.meetingFile.create({
-      data: {
-        storageName: basename(file.path),
-        originalName: sanitizeOriginalName(file.originalname),
-        mimeType: detected,
-        size: file.size,
-        meetingId,
-        userId,
-      },
-    });
+    try {
+      await this.requireOwnedMeeting(meetingId, userId);
 
-    return {
-      id: record.id,
-      originalName: record.originalName,
-      mimeType: record.mimeType,
-      size: record.size,
-      createdAt: record.createdAt,
-    };
+      if (file.size === 0) {
+        throw new BadRequestException('Empty file');
+      }
+
+      const detected = await this.detector.detect(file.path);
+      if (!detected || !isAllowedMime(detected)) {
+        throw new BadRequestException('File content does not match allowed types');
+      }
+
+      const record = await this.prisma.meetingFile.create({
+        data: {
+          storagePath: join(userId, meetingId, basename(file.path)),
+          originalName: file.originalname,
+          mimeType: detected,
+          size: file.size,
+          meetingId,
+          userId,
+        },
+      });
+
+      return {
+        id: record.id,
+        originalName: record.originalName,
+        mimeType: record.mimeType,
+        size: record.size,
+        createdAt: record.createdAt,
+      };
+    } catch (err) {
+      await unlink(file.path).catch(() => undefined);
+      throw err;
+    }
   }
 
   async findAll(meetingId: string, userId: string) {
@@ -85,12 +96,19 @@ export class FilesService {
     return file;
   }
 
-  download(
-    file: { originalName: string; mimeType: string; storageName: string },
-    userId: string,
-    meetingId: string,
-  ) {
-    const absPath = this.resolveStoredPath(userId, meetingId, file.storageName);
+  async download(file: { originalName: string; mimeType: string; storagePath: string }) {
+    const absPath = this.resolveStoredPath(file.storagePath);
+
+    try {
+      await stat(absPath);
+    } catch (err) {
+      const fsError = err as NodeJS.ErrnoException;
+      if (fsError.code === 'ENOENT') {
+        throw new NotFoundException('File not found');
+      }
+      throw err;
+    }
+
     const disposition = `attachment; filename*=UTF-8''${encodeURIComponent(file.originalName)}`;
     return new StreamableFile(createReadStream(absPath), {
       type: file.mimeType,
@@ -99,13 +117,11 @@ export class FilesService {
   }
 
   preview(
-    file: { originalName: string; storageName: string },
-    userId: string,
-    meetingId: string,
+    file: { originalName: string; storagePath: string },
     res: import('express').Response,
     next: import('express').NextFunction,
   ) {
-    const absPath = this.resolveStoredPath(userId, meetingId, file.storageName);
+    const absPath = this.resolveStoredPath(file.storagePath);
     res.setHeader(
       'Content-Disposition',
       `inline; filename*=UTF-8''${encodeURIComponent(file.originalName)}`,
@@ -121,16 +137,20 @@ export class FilesService {
 
   async remove(fileId: string, meetingId: string, userId: string) {
     const file = await this.findOwned(fileId, meetingId, userId);
-
-    await this.prisma.meetingFile.delete({ where: { id: file.id } });
+    const absPath = this.resolveStoredPath(file.storagePath);
 
     try {
-      await unlink(this.resolveStoredPath(userId, meetingId, file.storageName));
+      await unlink(absPath);
     } catch (err) {
-      this.logger.warn(
-        `Orphaned file on disk after DB delete: ${file.storageName} (${(err as Error).message})`,
-      );
+      const fsError = err as NodeJS.ErrnoException;
+      if (fsError.code !== 'ENOENT') {
+        this.logger.error(`Failed to delete file from disk: ${file.storagePath}`);
+        throw err;
+      }
+      this.logger.warn(`File already missing on disk, removing record: ${file.storagePath}`);
     }
+
+    await this.prisma.meetingFile.delete({ where: { id: file.id } });
 
     return { message: 'File deleted' };
   }
@@ -146,9 +166,9 @@ export class FilesService {
     }
   }
 
-  private resolveStoredPath(userId: string, meetingId: string, storageName: string): string {
-    const base = resolve(this.uploadDir, userId, meetingId);
-    const absPath = resolve(base, storageName);
+  private resolveStoredPath(storagePath: string): string {
+    const base = resolve(this.uploadDir);
+    const absPath = resolve(base, storagePath);
     if (!absPath.startsWith(base + sep)) {
       throw new ForbiddenException('Invalid file path');
     }

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { fileTypeFromBuffer } from 'file-type';
 import { open } from 'node:fs/promises';
 
 export interface MimeTypeDetector {
@@ -9,9 +10,6 @@ export interface MimeTypeDetector {
 export class FileTypeMimeDetector implements MimeTypeDetector {
   async detect(absPath: string): Promise<string | null> {
     try {
-      // file-type is ESM-only; `eval` keeps the dynamic import intact in a CommonJS build.
-      // eslint-disable-next-line no-eval
-      const { fileTypeFromBuffer } = await eval('import("file-type")');
       const handle = await open(absPath, 'r');
       const head = Buffer.alloc(4100);
       const { bytesRead } = await handle.read(head, 0, 4100, 0);

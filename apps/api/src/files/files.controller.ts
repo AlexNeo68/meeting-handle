@@ -48,7 +48,7 @@ export class FilesController {
     @UserId() userId: string,
   ) {
     const file = await this.filesService.findOwned(fileId, meetingId, userId);
-    return this.filesService.download(file, userId, meetingId);
+    return this.filesService.download(file);
   }
 
   @Get(':fileId/preview')
@@ -61,7 +61,7 @@ export class FilesController {
     @Next() next: NextFunction,
   ) {
     const file = await this.filesService.findOwned(fileId, meetingId, userId);
-    this.filesService.preview(file, userId, meetingId, res, next);
+    this.filesService.preview(file, res, next);
   }
 
   @Delete(':fileId')

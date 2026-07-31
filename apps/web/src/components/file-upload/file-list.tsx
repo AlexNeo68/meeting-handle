@@ -99,7 +99,7 @@ export default function FileList({ meetingId, refreshToken = 0, onRequestUpload 
         </svg>
         <p className="mt-3 text-sm text-muted">Файлы ещё не загружены</p>
         {onRequestUpload && (
-          <Button className="mt-5" variant="secondary" onPress={onRequestUpload}>
+          <Button className="mt-5 min-h-11" variant="secondary" onPress={onRequestUpload}>
             Загрузить первый файл
           </Button>
         )}
@@ -108,7 +108,7 @@ export default function FileList({ meetingId, refreshToken = 0, onRequestUpload 
   }
 
   return (
-    <ul role="list" aria-label="Meeting files" className="flex flex-col gap-3">
+    <ul role="list" aria-label="Файлы встречи" className="flex flex-col gap-3">
       {files.map((file) => (
         <FileItem
           key={file.id}

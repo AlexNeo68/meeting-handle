@@ -291,9 +291,11 @@ function validateTerms(isSelected: boolean): string | null {
 | `apps/web/src/app/signup/layout.tsx` | Metadata для signup |
 | `apps/web/src/app/(authenticated)/page.tsx` | Список встреч (карточки-ссылки на `/meetings/[id]`) |
 | `apps/web/src/app/(authenticated)/meetings/[id]/page.tsx` | Страница встречи: инфо, участники, секция файлов |
-| `apps/web/src/components/file-upload/file-upload.tsx` | Dropzone + XHR-загрузка с прогрессом, валидация 100MB/MIME |
+| `apps/web/src/components/file-upload/file-upload.tsx` | Dropzone + XHR-загрузка с прогрессом, валидация 100MB/MIME (константы из `@meeting-ai/shared`) |
 | `apps/web/src/components/file-upload/file-list.tsx` | Список файлов: skeleton, empty state, error, refreshToken |
-| `apps/web/src/components/file-upload/file-item.tsx` | Строка файла: скачивание (blob), удаление (AlertDialog) |
+| `apps/web/src/components/file-upload/file-item.tsx` | Строка файла: скачивание (blob), удаление (AlertDialog), inline preview |
+| `apps/web/src/components/file-upload/file-preview.tsx` | Audio/video inline player (blob URL + revoke), error state |
+| `apps/web/src/lib/format-date.ts` | Общий `formatDate` (используется на страницах встреч и списка) |
 | `apps/web/src/components/providers.tsx` | ToastProvider (`placement="bottom end"`), AuthProvider |
 | `apps/web/src/contexts/auth-context.tsx` | Auth: login/register, token в localStorage |
 | `apps/web/next.config.js` | Rewrites `/api/*` → `localhost:3001/*` |
@@ -308,6 +310,7 @@ function validateTerms(isSelected: boolean): string | null {
 |------|------|---------|------------|
 | 2026-07-26 | `signup/page.tsx` | 15 проблем | 15 исправлений |
 | 2026-07-31 | `file-upload/*`, `meetings/[id]/page.tsx` | rewrite-конфликт `/meetings/:path*` ↔ `/meetings/[id]` | префикс `/api/` для всех API-вызовов |
+| 2026-07-31 | `file-upload/*` (code review) | RU-aria-labels с миксами языков, нет `aria-live`, touch targets < 44px, дубли `formatDate` и MIME-констант | RU-aria-labels с именем файла, `aria-live="polite"` на ошибках, `min-h-11` на интерактиве, общий `format-date.ts`, `@meeting-ai/shared` |
 
 ### Все исправления (signup/page.tsx)
 

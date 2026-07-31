@@ -4,24 +4,21 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { diskStorage } from 'multer';
-import { isAllowedMime, MAX_FILE_SIZE } from './files.constants';
+import { isAllowedMime, MAX_FILE_SIZE } from '@meeting-ai/shared';
 import { sanitizeOriginalName } from './file-name.util';
 
 export function multerDiskOptions(uploadDir: string): MulterOptions {
   return {
     storage: diskStorage({
       destination: (req, _file, cb) => {
-        const userId =
-          (req.user as { sub?: string } | undefined)?.sub ?? String(req.headers['x-user-id'] ?? '');
+        const userId = (req.user as { sub?: string } | undefined)?.sub ?? '';
         const meetingId = req.params.meetingId;
         const dir = join(uploadDir, userId, meetingId);
         mkdirSync(dir, { recursive: true });
         cb(null, dir);
       },
       filename: (_req, file, cb) => {
-        const sanitized = sanitizeOriginalName(file.originalname);
-        const ext = /\.([a-z0-9]{1,10})$/i.exec(sanitized)?.[0]?.toLowerCase() ?? '';
-        cb(null, `${randomUUID()}${ext}`);
+        cb(null, `${randomUUID()}-${sanitizeOriginalName(file.originalname)}`);
       },
     }),
     limits: { fileSize: MAX_FILE_SIZE, files: 1 },

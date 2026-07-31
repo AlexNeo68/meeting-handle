@@ -16,6 +16,7 @@ describe('Files (e2e)', () => {
   let prisma: PrismaService;
   let tmpDir: string;
   let token: string;
+  let ownerUserId: string;
   let meetingId: string;
 
   const detectorMock = {
@@ -55,6 +56,7 @@ describe('Files (e2e)', () => {
       .post('/auth/register')
       .send({ email: 'files@example.com', password: 'password123' });
     token = userRes.body.token;
+    ownerUserId = userRes.body.userId;
 
     const meetingRes = await request(app.getHttpServer())
       .post('/meetings')
@@ -88,12 +90,24 @@ describe('Files (e2e)', () => {
       expect(res.body.createdAt).toBeDefined();
     });
 
-    it('should return 413 for file over the size limit', async () => {
-      await request(app.getHttpServer())
+    it('should return 400 for file over the size limit', async () => {
+      const res = await request(app.getHttpServer())
         .post(`/meetings/${meetingId}/files`)
         .set('Authorization', `Bearer ${token}`)
         .attach('file', Buffer.alloc(2048), { filename: 'big.mp4', contentType: 'video/mp4' })
-        .expect(413);
+        .expect(400);
+
+      expect(res.body.message).toBe('File size exceeds 100 MB limit');
+    });
+
+    it('should return 400 for an empty file', async () => {
+      const res = await request(app.getHttpServer())
+        .post(`/meetings/${meetingId}/files`)
+        .set('Authorization', `Bearer ${token}`)
+        .attach('file', Buffer.alloc(0), { filename: 'empty.pdf', contentType: 'application/pdf' })
+        .expect(400);
+
+      expect(res.body.message).toBe('Empty file');
     });
 
     it('should return 400 for unsupported MIME type', async () => {
@@ -199,6 +213,24 @@ describe('Files (e2e)', () => {
         .expect(404);
     });
 
+    it('should return 404 when the file is missing on disk', async () => {
+      const record = await prisma.meetingFile.create({
+        data: {
+          storagePath: `missing/${crypto.randomUUID()}.pdf`,
+          originalName: 'ghost.pdf',
+          mimeType: 'application/pdf',
+          size: 10,
+          meetingId,
+          userId: ownerUserId,
+        },
+      });
+
+      await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files/${record.id}/download`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
+    });
+
     it('should return 404 when downloading another user file', async () => {
       const uploadRes = await uploadPdf().expect(201);
 
@@ -274,6 +306,27 @@ describe('Files (e2e)', () => {
         .delete(`/meetings/${meetingId}/files/00000000-0000-0000-0000-000000000000`)
         .set('Authorization', `Bearer ${token}`)
         .expect(404);
+    });
+
+    it('should delete a record whose file is already missing on disk', async () => {
+      const record = await prisma.meetingFile.create({
+        data: {
+          storagePath: `missing/${crypto.randomUUID()}.pdf`,
+          originalName: 'ghost.pdf',
+          mimeType: 'application/pdf',
+          size: 10,
+          meetingId,
+          userId: ownerUserId,
+        },
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/meetings/${meetingId}/files/${record.id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      const remaining = await prisma.meetingFile.findUnique({ where: { id: record.id } });
+      expect(remaining).toBeNull();
     });
 
     it('should return 404 when deleting another user file', async () => {

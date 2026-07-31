@@ -40,10 +40,12 @@ apps/web/
 │   │       ├── page.tsx        # список встреч (карточки-ссылки)
 │   │       └── meetings/[id]/  # страница встречи: инфо, участники, файлы
 │   ├── components/
-│   │   ├── file-upload/        # file-upload, file-list, file-item, index
+│   │   ├── file-upload/        # file-upload, file-list, file-item, file-preview, index
 │   │   └── providers.tsx       # AuthProvider + ToastProvider
 │   ├── contexts/
 │   │   └── auth-context.tsx    # useAuth(): token/user/login/logout
+│   ├── lib/
+│   │   └── format-date.ts      # общий форматтер дат (formatDate)
 │   └── test-setup.ts           # vitest setup (jsdom, localStorage)
 ├── next.config.js              # rewrites /api/* → http://localhost:3001/*
 ├── postcss.config.mjs          # PostCSS (Tailwind CSS v4)
@@ -67,6 +69,7 @@ apps/web/
 - **HeroUI v3 Form** — все `<Input>` должны иметь `className="w-full"`. Форма: `<Form className="w-full">`.
 - **Навигация** — всегда `useRouter().push()`, никогда `window.location.href`.
 - **Доступность** — ошибки: `role="alert"` + `aria-live="polite"`. Формы: `aria-label`. Инпуты: `autoComplete`. Интерактивные элементы ≥ 44×44 (`min-h-11`).
+- **Общие константы** — MIME-типы и лимит размера берутся из `@meeting-ai/shared` (`packages/shared`), не дублируются на фронте.
 - **ToastProvider** — placement принимает только RAC-значения: `"bottom end"` (не `"bottom-right"`).
 - Стили — CSS Modules, Tailwind или `globals.css`. Решение за автором — единообразие внутри фичи.
 - Изображения — `next/image` вместо `<img>`. Иконки — SVG (не emoji).
