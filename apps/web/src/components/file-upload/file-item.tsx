@@ -3,67 +3,10 @@
 import { AlertDialog, Button, toast } from '@heroui/react';
 import { useState } from 'react';
 import { formatDate } from '@/lib/format-date';
+import { formatFileSize } from '@/lib/format-file-size';
+import { FileTypeIcon } from './file-icon';
 import FilePreview from './file-preview';
 import type { MeetingFile } from './file-upload';
-
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} Б`;
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} КБ`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
-}
-
-function FileTypeIcon({ mimeType }: { mimeType: string }) {
-  let label = 'document';
-  let path = (
-    <>
-      <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-      <path d="M14 2v4h4" />
-    </>
-  );
-
-  if (mimeType.startsWith('audio/')) {
-    label = 'audio';
-    path = (
-      <>
-        <path d="M9 18V6l10-2v12" />
-        <path d="M5 16a3 3 0 1 0 4 0V8" />
-        <path d="M15 14a3 3 0 1 0 4 0V8" />
-      </>
-    );
-  } else if (mimeType.startsWith('video/')) {
-    label = 'video';
-    path = (
-      <>
-        <rect x="3" y="5" width="14" height="14" rx="2" />
-        <path d="M17 10l4-2v8l-4-2" />
-      </>
-    );
-  } else if (mimeType === 'application/pdf') {
-    label = 'pdf';
-    path = (
-      <>
-        <path d="M6 2h8l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
-        <path d="M8 12h8M8 15h5M8 9h3" />
-      </>
-    );
-  }
-
-  return (
-    <svg
-      aria-hidden="true"
-      className="h-5 w-5 shrink-0 text-muted"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      data-file-type={label}
-    >
-      {path}
-    </svg>
-  );
-}
 
 interface FileItemProps {
   file: MeetingFile;
@@ -73,7 +16,6 @@ interface FileItemProps {
 }
 
 export default function FileItem({ file, meetingId, token, onDeleted }: FileItemProps) {
-  const isMedia = file.mimeType.startsWith('audio/') || file.mimeType.startsWith('video/');
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -139,36 +81,34 @@ export default function FileItem({ file, meetingId, token, onDeleted }: FileItem
             {file.originalName}
           </p>
           <p className="text-xs text-muted">
-            {formatBytes(file.size)} · {formatDate(file.createdAt)}
+            {formatFileSize(file.size)} · {formatDate(file.createdAt)}
           </p>
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2">
-          {isMedia && (
-            <Button
-              aria-label={`Просмотреть ${file.originalName}`}
-              aria-expanded={isPreviewOpen}
-              aria-controls={`preview-${file.id}`}
-              className="min-h-11 min-w-11 sm:min-w-fit"
-              size="sm"
-              variant="tertiary"
-              onPress={() => setIsPreviewOpen((open) => !open)}
+          <Button
+            aria-label={`Просмотреть ${file.originalName}`}
+            aria-expanded={isPreviewOpen}
+            aria-controls={`preview-${file.id}`}
+            className="min-h-11 min-w-11 sm:min-w-fit"
+            size="sm"
+            variant="tertiary"
+            onPress={() => setIsPreviewOpen((open) => !open)}
+          >
+            <svg
+              aria-hidden="true"
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                aria-hidden="true"
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M6 4l14 8-14 8V4z" />
-              </svg>
-              <span className="hidden sm:inline">{isPreviewOpen ? 'Скрыть' : 'Просмотр'}</span>
-            </Button>
-          )}
+              <path d="M6 4l14 8-14 8V4z" />
+            </svg>
+            <span className="hidden sm:inline">{isPreviewOpen ? 'Скрыть' : 'Просмотр'}</span>
+          </Button>
 
           <Button
             aria-label={`Скачать ${file.originalName}`}
@@ -256,7 +196,7 @@ export default function FileItem({ file, meetingId, token, onDeleted }: FileItem
         </div>
       </div>
 
-      {isPreviewOpen && isMedia && (
+      {isPreviewOpen && (
         <div id={`preview-${file.id}`}>
           <FilePreview file={file} meetingId={meetingId} token={token} />
         </div>

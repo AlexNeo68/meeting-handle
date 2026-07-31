@@ -10,7 +10,10 @@ vi.mock('@heroui/react', async (importOriginal) => {
   };
 });
 
-function makeFile(mimeType: string): {
+function makeFile(
+  mimeType: string,
+  originalName?: string,
+): {
   id: string;
   originalName: string;
   mimeType: string;
@@ -19,7 +22,7 @@ function makeFile(mimeType: string): {
 } {
   return {
     id: 'file-1',
-    originalName: 'запись.mp3',
+    originalName: originalName ?? 'запись.mp3',
     mimeType,
     size: 1024,
     createdAt: '2026-07-30T09:00:00.000Z',
@@ -85,12 +88,19 @@ describe('FilePreview', () => {
     expect(container.querySelector('video')).toHaveAttribute('src', 'blob:media');
   });
 
-  it('renders nothing for non-media files', () => {
+  it('renders a document icon block for non-media files', () => {
     const { container } = render(
-      <FilePreview file={makeFile('application/pdf')} meetingId="meeting-1" token="jwt-token" />,
+      <FilePreview
+        file={makeFile('application/pdf', 'заметки.pdf')}
+        meetingId="meeting-1"
+        token="jwt-token"
+      />,
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(screen.getByText('заметки.pdf')).toBeInTheDocument();
+    expect(screen.getByText('1 КБ')).toBeInTheDocument();
+    expect(screen.getByText('PDF-документ')).toBeInTheDocument();
+    expect(container.querySelector('svg')).toHaveAttribute('data-file-type', 'pdf');
   });
 
   it('shows an error alert when the preview request fails', async () => {

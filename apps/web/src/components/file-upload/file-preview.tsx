@@ -2,6 +2,8 @@
 
 import { Spinner } from '@heroui/react';
 import { useEffect, useState } from 'react';
+import { formatFileSize } from '@/lib/format-file-size';
+import { FileTypeIcon } from './file-icon';
 import type { MeetingFile } from './file-upload';
 
 interface FilePreviewProps {
@@ -53,7 +55,17 @@ export default function FilePreview({ file, meetingId, token }: FilePreviewProps
   }, [file.id, meetingId, token]);
 
   if (!isAudio && !isVideo) {
-    return null;
+    return (
+      <div className="mt-2 flex items-center gap-3 rounded-lg border border-divider px-4 py-4">
+        <FileTypeIcon mimeType={file.mimeType} className="h-8 w-8 shrink-0 text-muted" />
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium" title={file.originalName}>
+            {file.originalName}
+          </p>
+          <p className="text-xs text-muted">{formatFileSize(file.size)}</p>
+        </div>
+      </div>
+    );
   }
 
   return (

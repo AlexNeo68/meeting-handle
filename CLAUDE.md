@@ -60,9 +60,9 @@ meeting-ai/
 │   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
 │       └── src/
 │           ├── app/         # /, /login, /signup, (authenticated)/meetings/[id]
-│           ├── components/  # file-upload UI (upload/list/item/preview), providers (Toast)
+│           ├── components/  # file-upload UI (upload/list/item/preview/icon), providers (Toast)
 │           ├── contexts/    # auth-context (useAuth)
-│           └── lib/         # format-date.ts (общий форматтер дат)
+│           └── lib/         # format-date.ts, format-file-size.ts (общие форматтеры)
 ├── packages/
 │   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы)
 ├── design-system/           # ui-ux-pro-max master (палитра, типографика, токены)

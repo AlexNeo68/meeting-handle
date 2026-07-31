@@ -40,6 +40,7 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
   const { token } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -53,6 +54,7 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
   const uploadFile = useCallback(
     (file: File) => {
       setIsUploading(true);
+      setIsProcessing(false);
       setProgress(0);
 
       const formData = new FormData();
@@ -68,8 +70,13 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
         }
       };
 
+      xhr.upload.onload = () => {
+        setIsProcessing(true);
+      };
+
       xhr.onload = () => {
         setIsUploading(false);
+        setIsProcessing(false);
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const data = JSON.parse(xhr.responseText) as MeetingFile;
@@ -84,11 +91,13 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
 
       xhr.onerror = () => {
         setIsUploading(false);
+        setIsProcessing(false);
         toast.danger('Ошибка сети. Попробуйте ещё раз.');
       };
 
       xhr.onabort = () => {
         setIsUploading(false);
+        setIsProcessing(false);
       };
 
       xhr.send(formData);
@@ -173,8 +182,15 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
         </Button>
 
         {isUploading && (
-          <ProgressBar.Root value={progress} aria-label="Загрузка файла" className="w-full">
-            <ProgressBar.Output className="text-xs text-muted">{progress}%</ProgressBar.Output>
+          <ProgressBar.Root
+            value={progress}
+            isIndeterminate={isProcessing}
+            aria-label={isProcessing ? 'Обработка файла' : 'Загрузка файла'}
+            className="w-full"
+          >
+            <ProgressBar.Output className="text-xs text-muted">
+              {isProcessing ? 'Обработка...' : `${progress}%`}
+            </ProgressBar.Output>
             <ProgressBar.Track>
               <ProgressBar.Fill />
             </ProgressBar.Track>

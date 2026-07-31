@@ -26,6 +26,7 @@ class FakeXMLHttpRequest {
   upload = {
     onprogress: null as
       null | ((e: { lengthComputable: boolean; loaded: number; total: number }) => void),
+    onload: null as null | (() => void),
   };
   onload: null | (() => void) = null;
   onerror: null | (() => void) = null;
@@ -108,6 +109,40 @@ describe('FileUpload', () => {
       expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '50');
+
+    xhr.status = 201;
+    xhr.responseText = JSON.stringify({
+      id: 'file-1',
+      originalName: 'notes.pdf',
+      mimeType: 'application/pdf',
+      size: 100,
+      createdAt: '2026-07-31T08:00:00.000Z',
+    });
+    xhr.onload?.();
+
+    await waitFor(() => {
+      expect(onUploaded).toHaveBeenCalledWith(expect.objectContaining({ id: 'file-1' }));
+    });
+  });
+
+  it('switches to indeterminate progress while the server processes', async () => {
+    const { onUploaded } = renderUpload();
+
+    selectFile(makeFile('notes.pdf', 'application/pdf'));
+
+    await waitFor(() => {
+      expect(FakeXMLHttpRequest.instances).toHaveLength(1);
+    });
+
+    const xhr = FakeXMLHttpRequest.instances[0];
+    xhr.upload.onload?.();
+
+    await waitFor(() => {
+      const progressbar = screen.getByRole('progressbar');
+      expect(progressbar).not.toHaveAttribute('aria-valuenow');
+      expect(progressbar).toHaveAttribute('aria-label', 'Обработка файла');
+    });
+    expect(screen.getByText('Обработка...')).toBeInTheDocument();
 
     xhr.status = 201;
     xhr.responseText = JSON.stringify({

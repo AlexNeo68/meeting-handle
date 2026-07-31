@@ -256,6 +256,26 @@ function validateTerms(isSelected: boolean): string | null {
 
 **Решение:** Все API-вызовы фронтенда идут через префикс `/api/` (`/api/meetings/...`, `/api/auth/...`, `/api/user/...`), rewrites маппят `/api/*` на `localhost:3001/*`. Страничные маршруты больше не пересекаются с прокси.
 
+### 18. Media preview — `figure`/`figcaption`, blob URL + revoke
+
+**Решение:** Audio/video превью — семантическая пара `<figure>` + `<figcaption>` (имя файла). Контент — blob URL из `fetch` (`URL.createObjectURL`), `revokeObjectURL` в `useEffect` cleanup. `<video>` с `preload="metadata"` и `controls` — не грузит медиа целиком, только заголовок.
+
+### 19. Иконки типов файлов — SVG + `sr-only` label
+
+**Решение:** `FileTypeIcon` (`apps/web/src/components/file-upload/file-icon.tsx`) — inline SVG по MIME-типу (audio/video/pdf/doc/file) с атрибутом `data-file-type` для тестов, `aria-hidden="true"` на `<svg>` + `sr-only` span с человекочитаемым label (`fileTypeLabel()`: «Аудиофайл», «Видеофайл», «PDF-документ», «Документ», «Файл»). Иконка декоративная, доступность несёт текст.
+
+### 20. `formatFileSize` — единый форматтер размеров
+
+**Решение:** `apps/web/src/lib/format-file-size.ts` — `formatFileSize(bytes, locale='ru-RU')`, единицы Б/КБ/МБ/ГБ/ТБ через `Intl.NumberFormat`. Возвращает `''` для невалидных значений. Не дублировать форматтер по компонентам.
+
+### 21. Indeterminate-фаза после загрузки
+
+**Решение:** После `xhr.upload.onload` сервер ещё обрабатывает файл → `isIndeterminate` на `ProgressBar.Root` (HeroUI включает CSS-анимацию, `motion-reduce:animate-none` встроен), aria-label «Обработка файла», Output «Обработка...». Переход «Загрузка N% → Обработка → готово» честно отражает две фазы.
+
+### 22. Preview для всех типов файлов
+
+**Решение:** Кнопка «Просмотреть» — для каждого файла (`aria-expanded` + `aria-controls`). Медиа — inline player, документы — блок с `FileTypeIcon`, именем и размером. Нет «мёртвых» иконок-бездействий.
+
 ---
 
 ## Структура компонента — чеклист
@@ -280,6 +300,11 @@ function validateTerms(isSelected: boolean): string | null {
 - [ ] Ошибки от API показываются через `toast.danger`, не только в консоли
 - [ ] API-вызовы идут через префикс `/api/` (не конфликтуют с page routes)
 - [ ] Lint и build проходят без ошибок
+- [ ] Media preview: `figure`/`figcaption`, blob URL + revoke, `preload="metadata"`
+- [ ] Иконки типов: inline SVG `aria-hidden` + `sr-only` label (не emoji)
+- [ ] Формат размеров через общий `formatFileSize` (Б/КБ/МБ/ГБ/ТБ)
+- [ ] Двухфазный прогресс: `isIndeterminate` на время обработки после загрузки
+- [ ] Preview доступен для всех типов файлов (документы — иконка+имя+размер)
 
 ---
 
@@ -294,7 +319,9 @@ function validateTerms(isSelected: boolean): string | null {
 | `apps/web/src/components/file-upload/file-upload.tsx` | Dropzone + XHR-загрузка с прогрессом, валидация 100MB/MIME (константы из `@meeting-ai/shared`) |
 | `apps/web/src/components/file-upload/file-list.tsx` | Список файлов: skeleton, empty state, error, refreshToken |
 | `apps/web/src/components/file-upload/file-item.tsx` | Строка файла: скачивание (blob), удаление (AlertDialog), inline preview |
-| `apps/web/src/components/file-upload/file-preview.tsx` | Audio/video inline player (blob URL + revoke), error state |
+| `apps/web/src/components/file-upload/file-preview.tsx` | Audio/video inline player (blob URL + revoke) / документ: иконка+имя+размер, error state |
+| `apps/web/src/components/file-upload/file-icon.tsx` | `FileTypeIcon` (SVG по MIME) + `fileTypeLabel` |
+| `apps/web/src/lib/format-file-size.ts` | Общий `formatFileSize` (Б/КБ/МБ/ГБ/ТБ) |
 | `apps/web/src/lib/format-date.ts` | Общий `formatDate` (используется на страницах встреч и списка) |
 | `apps/web/src/components/providers.tsx` | ToastProvider (`placement="bottom end"`), AuthProvider |
 | `apps/web/src/contexts/auth-context.tsx` | Auth: login/register, token в localStorage |
@@ -311,6 +338,7 @@ function validateTerms(isSelected: boolean): string | null {
 | 2026-07-26 | `signup/page.tsx` | 15 проблем | 15 исправлений |
 | 2026-07-31 | `file-upload/*`, `meetings/[id]/page.tsx` | rewrite-конфликт `/meetings/:path*` ↔ `/meetings/[id]` | префикс `/api/` для всех API-вызовов |
 | 2026-07-31 | `file-upload/*` (code review) | RU-aria-labels с миксами языков, нет `aria-live`, touch targets < 44px, дубли `formatDate` и MIME-констант | RU-aria-labels с именем файла, `aria-live="polite"` на ошибках, `min-h-11` на интерактиве, общий `format-date.ts`, `@meeting-ai/shared` |
+| 2026-07-31 | `file-upload/*` (P2 polish, issue #6) | preview только для медиа, дубли `formatBytes`/иконок, нет индикации «обработки» после загрузки | `file-preview.tsx` для всех типов, `file-icon.tsx` + `format-file-size.ts`, `isIndeterminate` прогресс |
 
 ### Все исправления (signup/page.tsx)
 

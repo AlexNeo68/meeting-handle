@@ -4,4 +4,5 @@ export { MAX_FILE_SIZE, isAllowedMime, ACCEPT_ATTR } from './file-upload';
 export { default as FileList } from './file-list';
 export { default as FileItem } from './file-item';
 export { default as FilePreview } from './file-preview';
-export { formatBytes } from './file-item';
+export { FileTypeIcon, fileTypeLabel } from './file-icon';
+export { formatFileSize } from '@/lib/format-file-size';
