@@ -23,7 +23,8 @@
   },
   "overrides": {
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "multer": "^2.2.0"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",

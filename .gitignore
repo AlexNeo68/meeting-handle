@@ -17,3 +17,6 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Uploaded files (user content, not served statically)
+apps/api/uploads/
