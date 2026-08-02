@@ -65,6 +65,7 @@ describe('RegisterHandler', () => {
       data: {
         email: command.email,
         password: expect.any(String),
+        name: null,
       },
     });
     expect(eventBus.publish).toHaveBeenCalledTimes(1);
@@ -83,5 +84,49 @@ describe('RegisterHandler', () => {
 
     expect(mockPrisma.user.create).not.toHaveBeenCalled();
     expect(eventBus.publish).not.toHaveBeenCalled();
+  });
+
+  it('should persist trimmed name on create', async () => {
+    const command = new RegisterCommand('named@example.com', 'password123', '  Alice  ');
+
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+    mockPrisma.user.create.mockResolvedValue({
+      id: 'uuid-456',
+      email: command.email,
+      password: 'hashed',
+      name: 'Alice',
+    });
+
+    await handler.execute(command);
+
+    expect(mockPrisma.user.create).toHaveBeenCalledWith({
+      data: {
+        email: command.email,
+        password: expect.any(String),
+        name: 'Alice',
+      },
+    });
+  });
+
+  it('should persist null name when name is missing or blank', async () => {
+    const command = new RegisterCommand('blank@example.com', 'password123', '   ');
+
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+    mockPrisma.user.create.mockResolvedValue({
+      id: 'uuid-789',
+      email: command.email,
+      password: 'hashed',
+      name: null,
+    });
+
+    await handler.execute(command);
+
+    expect(mockPrisma.user.create).toHaveBeenCalledWith({
+      data: {
+        email: command.email,
+        password: expect.any(String),
+        name: null,
+      },
+    });
   });
 });

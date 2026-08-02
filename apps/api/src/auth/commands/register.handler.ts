@@ -25,10 +25,13 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
 
     const hashedPassword = await bcrypt.hash(command.password, 10);
 
+    const trimmedName = command.name?.trim();
+
     const user = await this.prisma.user.create({
       data: {
         email: command.email,
         password: hashedPassword,
+        name: trimmedName || null,
       },
     });
 

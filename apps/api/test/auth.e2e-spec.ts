@@ -43,6 +43,34 @@ describe('Auth (e2e)', () => {
       expect(typeof res.body.userId).toBe('string');
     });
 
+    it('should persist optional name at registration', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'named@example.com', password: 'password123', name: '  Alice  ' })
+        .expect(201);
+
+      const profile = await request(app.getHttpServer())
+        .get('/user/profile')
+        .set('Authorization', `Bearer ${res.body.token}`)
+        .expect(200);
+
+      expect(profile.body.name).toBe('Alice');
+    });
+
+    it('should keep name null when registering without name', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'noname@example.com', password: 'password123' })
+        .expect(201);
+
+      const profile = await request(app.getHttpServer())
+        .get('/user/profile')
+        .set('Authorization', `Bearer ${res.body.token}`)
+        .expect(200);
+
+      expect(profile.body.name).toBeNull();
+    });
+
     it('should return 409 when email already exists', async () => {
       await request(app.getHttpServer())
         .post('/auth/register')
