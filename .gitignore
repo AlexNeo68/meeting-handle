@@ -28,3 +28,8 @@ apps/api/uploads/
 test-results/
 playwright-report/
 blob-report/
+
+# Ralph loop runtime state
+.claude/ralph-loop.log
+.claude/ralph.iterations.json
+.claude/.ralph-*.md

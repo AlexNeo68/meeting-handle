@@ -1,19 +1,22 @@
 {
   "active": true,
-  "maxIterations": 50,
+  "maxIterations": 100,
   "maxFixAttempts": 5,
-  "prompt": "Прочитай .claude/ralph.md и следуй правилам оттуда. Возьми открытую Issue из milestone '{milestone}' и реализуй её в '{branch}'. После реализации запусти тесты и доведи их до зелёного. Закрой Issue, когда тесты зелёные и требования выполнены.",
-  "tests": ["npm run test"],
+  "prompt": "Ты — build-агент проекта Meeting AI (monorepo: apps/web — Next.js 15 + HeroUI v3, apps/api — NestJS 10). Прочитай .claude/ralph.md и следуй правилам оттуда.",
+  "tests": ["npm run test:web", "npm run test:api"],
+  "gates": ["npm run lint"],
   "phases": [
     {
       "milestone": "P1 (MVP)",
       "branch": "feat/user-profile",
-      "tests": ["npm run test:web", "npm run test:api"]
+      "tests": ["npm run test:web", "npm run test:api"],
+      "gates": ["npm run lint"]
     },
     {
       "milestone": "P2 (Remove avatar)",
-      "branch": "feat/user-profile",
-      "tests": ["npm run test:web", "npm run test:api"]
+      "branch": "feat/remove-avatar",
+      "tests": ["npm run test:web", "npm run test:api"],
+      "gates": ["npm run lint"]
     }
   ]
 }
