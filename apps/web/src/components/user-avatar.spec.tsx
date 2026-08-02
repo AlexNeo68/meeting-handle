@@ -77,6 +77,7 @@ describe('UserAvatar', () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith('/api/user/profile/avatar', {
+        cache: 'no-store',
         headers: { Authorization: 'Bearer jwt-token' },
       });
     });
@@ -122,5 +123,21 @@ describe('UserAvatar', () => {
 
     expect(screen.getByRole('status', { name: 'Загрузка аватара' })).toBeInTheDocument();
     expect(screen.getByTestId('spinner')).toBeInTheDocument();
+  });
+
+  it('falls back to initials with a title hint when the avatar fetch fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('network error')));
+
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1', email: 'ivan@example.com', name: 'Иван Петров', hasAvatar: true },
+      token: 'jwt-token',
+      avatarVersion: 0,
+    });
+
+    render(<UserAvatar />);
+
+    const fallback = await screen.findByRole('img', { name: 'Иван Петров' });
+    expect(fallback).toHaveTextContent('ИП');
+    expect(fallback).toHaveAttribute('title', 'Не удалось загрузить аватар');
   });
 });

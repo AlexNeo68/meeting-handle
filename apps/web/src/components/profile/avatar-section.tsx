@@ -19,6 +19,8 @@ export default function AvatarSection() {
 
   const uploadAvatar = useCallback(
     (file: File) => {
+      if (!token) return;
+
       setIsUploading(true);
       setError(null);
 
@@ -88,6 +90,7 @@ export default function AvatarSection() {
           isDisabled={isUploading}
           isPending={isUploading}
           onPress={openDialog}
+          aria-describedby={error ? 'avatar-section-error' : undefined}
         >
           {({ isPending }) => (isPending ? 'Загрузка...' : 'Загрузить аватар')}
         </Button>

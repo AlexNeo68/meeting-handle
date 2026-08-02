@@ -40,6 +40,7 @@ export default function UserAvatar({ size = 96, className = '', isUploading = fa
     async function load() {
       try {
         const res = await fetch('/api/user/profile/avatar', {
+          cache: 'no-store',
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -114,6 +115,7 @@ export default function UserAvatar({ size = 96, className = '', isUploading = fa
     <div
       role="img"
       aria-label={alt}
+      title={error ?? undefined}
       className={`flex shrink-0 select-none items-center justify-center rounded-full bg-accent font-semibold text-accent-foreground ${className}`}
       style={{ width: size, height: size, fontSize: size * 0.38 }}
     >
