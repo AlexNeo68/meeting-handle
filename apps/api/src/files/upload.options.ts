@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { diskStorage } from 'multer';
 import { isAllowedMime, MAX_FILE_SIZE } from '@meeting-ai/shared';
-import { sanitizeOriginalName } from './file-name.util';
+import { sanitizeOriginalName } from '../common/utils/file-name.util';
 
 export function multerDiskOptions(uploadDir: string): MulterOptions {
   return {
