@@ -6,14 +6,23 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { StreamableFile } from '@nestjs/common';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { Readable } from 'node:stream';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { UserService } from './user.service';
+
+jest.mock('node:fs', () => {
+  const actual = jest.requireActual<typeof import('node:fs')>('node:fs');
+  return {
+    ...actual,
+    createReadStream: jest.fn(() => Readable.from(Buffer.from('avatar-bytes'))),
+  };
+});
 
 jest.mock('node:fs/promises');
 
@@ -298,10 +307,6 @@ describe('UserService', () => {
 
   describe('getAvatar', () => {
     it('should return StreamableFile with detected content type', async () => {
-      const absPath = join(uploadDir, 'uuid-123/avatar/avatar.png');
-      mkdirSync(join(uploadDir, 'uuid-123/avatar'), { recursive: true });
-      writeFileSync(absPath, Buffer.from('avatar-bytes'));
-
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
         avatarStoragePath: 'uuid-123/avatar/avatar.png',
@@ -316,10 +321,6 @@ describe('UserService', () => {
     });
 
     it('should fall back to octet-stream when content type is unknown', async () => {
-      const absPath = join(uploadDir, 'uuid-123/avatar/avatar.png');
-      mkdirSync(join(uploadDir, 'uuid-123/avatar'), { recursive: true });
-      writeFileSync(absPath, Buffer.from('avatar-bytes'));
-
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
         avatarStoragePath: 'uuid-123/avatar/avatar.png',
