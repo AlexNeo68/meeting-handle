@@ -46,17 +46,26 @@ if (issues.length > 0) {
     .replace('{milestone}', phase.milestone)
     .replace('{branch}', phase.branch)
 
-  execSync(`claude -p "${prompt}" --max-turns ${config.maxTurns}`, { stdio: 'inherit' })
+//   execSync(`claude -p "${prompt}" --max-turns ${config.maxTurns}`, { stdio: 'inherit' })
+  execSync(`opencode run --auto --agent build "${prompt}" --max-turns ${config.maxTurns}`, { stdio: 'inherit' })
 } else {
   console.log(`✅ Фаза ${counter.phaseIndex + 1} завершена. Создаём PR...`)
+//   execSync(
+//     `claude -p "Создай PR из ветки ${phase.branch} в main с названием 'feat: ${phase.milestone}'." --model claude-opus-4-7 --max-turns 10`,
+//     { stdio: 'inherit' },
+//   )
   execSync(
-    `claude -p "Создай PR из ветки ${phase.branch} в main с названием 'feat: ${phase.milestone}'." --model claude-opus-4-7 --max-turns 10`,
+    `opencode run --auto --agent build "Создай PR из ветки ${phase.branch} в main с названием 'feat: ${phase.milestone}'." --max-turns 10`,
     { stdio: 'inherit' },
   )
 
   console.log('🔍 Ревью Opus 5...')
+//   execSync(
+//     `claude -p "Найди последний открытый PR и проведи детальное code review. Проверь архитектуру, безопасность, производительность и соответствие PRD. Оставь комментарии в PR через gh cli." --model claude-opus-5 --max-turns ${config.maxTurns}`,
+//     { stdio: 'inherit' },
+//   )
   execSync(
-    `claude -p "Найди последний открытый PR и проведи детальное code review. Проверь архитектуру, безопасность, производительность и соответствие PRD. Оставь комментарии в PR через gh cli." --model claude-opus-5 --max-turns ${config.maxTurns}`,
+    `opencode run --auto --agent build "Найди последний открытый PR и проведи детальное code review. Проверь архитектуру, безопасность, производительность и соответствие PRD. Оставь комментарии в PR через gh cli." --max-turns ${config.maxTurns}`,
     { stdio: 'inherit' },
   )
 
@@ -75,5 +84,6 @@ if (issues.length > 0) {
     .replace('{milestone}', nextPhase.milestone)
     .replace('{branch}', nextPhase.branch)
 
-  execSync(`claude -p "${prompt}" --max-turns ${config.maxTurns}`, { stdio: 'inherit' })
+//   execSync(`claude -p "${prompt}" --max-turns ${config.maxTurns}`, { stdio: 'inherit' })
+  execSync(`opencode run --auto --agent build "${prompt}" --max-turns ${config.maxTurns}`, { stdio: 'inherit' })
 }

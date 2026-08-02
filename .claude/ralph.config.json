@@ -1,6 +1,6 @@
 {
   "active": true,
-  "maxIterations": 1,
+  "maxIterations": 20,
   "maxTurns": 500,
   "prompt": "Прочитай .claude/ralph.md и следуй правилам оттуда. Возьми следующую открытую Issue из milestone '{milestone}' и реализуй его в '{branch}'",
   "phases": [
