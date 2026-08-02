@@ -48,13 +48,19 @@ apps/web/
 │   │   └── (authenticated)/    # страницы под авторизацией
 │   │       ├── layout.tsx      # проверка токена, header с выходом
 │   │       ├── page.tsx        # создание встречи (форма) + список встреч (карточки-ссылки)
-│   │       └── meetings/[id]/  # страница встречи: инфо, участники, файлы
+│   │       ├── meetings/[id]/  # страница встречи: инфо, участники, файлы
+│   │       └── profile/        # /profile: карточки «Аватар» (AvatarSection), «Основное» (GeneralSection), «Пароль» (PasswordSection), skeleton при гидрации
 │   ├── components/
 │   │   ├── create-meeting-form.tsx # форма создания встречи (POST /api/meetings)
+│   │   ├── user-avatar.tsx    # круглый аватар (blob fetch с JWT) или инициалы, keyed на avatarVersion
+│   │   ├── profile/           # секции страницы профиля
+│   │   │   ├── avatar-section.tsx  # загрузка/замена аватара (клиентская валидация 5MB/MIME)
+│   │   │   ├── general-section.tsx # имя + email → PATCH /api/user/profile → updateUser(); 409 → инлайн-ошибка
+│   │   │   └── password-section.tsx # смена пароля → PATCH /api/user/password; короткий/несовпадение → инлайн
 │   │   ├── file-upload/        # file-upload, file-list, file-item, file-preview, file-icon, index
 │   │   └── providers.tsx       # AuthProvider + ToastProvider
 │   ├── contexts/
-│   │   └── auth-context.tsx    # useAuth(): token/user/login/logout
+│   │   └── auth-context.tsx    # useAuth(): token/user (name/hasAvatar)/login/logout/updateUser/avatarVersion
 │   ├── lib/
 │   │   ├── format-date.ts      # общий форматтер дат (formatDate)
 │   │   └── format-file-size.ts # общий форматтер размеров (formatFileSize, B/KB/MB/GB/TB)

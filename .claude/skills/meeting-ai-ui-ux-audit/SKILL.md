@@ -278,6 +278,28 @@ function validateTerms(isSelected: boolean): string | null {
 
 ---
 
+## Профиль — формы (2026-08-02)
+
+Аудит `apps/web/src/app/(authenticated)/profile/page.tsx` + `apps/web/src/components/profile/general-section.tsx` + `password-section.tsx` (T7).
+
+### 23. Профиль: 3 карточки + skeleton на гидрации
+
+**Решение:** Страница `/profile` — три stacked HeroUI `Card` («Аватар» / «Основное» / «Пароль»). Пока `user` в AuthContext не загружен (гидрация через `GET /api/auth/me`) — skeleton-блоки (HeroUI `Skeleton`) вместо спиннера на всю страницу (NFR-9).
+
+### 24. Инлайн-ошибка 409 email + `aria-describedby`
+
+**Решение:** Ошибки от сервера, привязанные к полю (занятый email → 409 «Email already exists»), показываются **рядом с полем** (не вверху): `<p role="alert" aria-live="polite" id="general-email-error">` + `aria-describedby` на `<Input>` — скринридер объявляет ошибку в контексте поля.
+
+### 25. Client-side cross-field валидация (confirm password)
+
+**Решение:** Совпадение паролей проверяется на клиенте через `validate` функцию, замыкающуюся на `newPassword` (`useCallback` с dep `[newPassword]`). `autoComplete="new-password"` на обоих полях пароля. Короткий (< 6) / несовпадающий пароль — `FieldError` рядом с полем, submit не уходит. Сетевые ошибки → `toast.danger`, server-ошибки (429 rate limit и т.п.) → инлайн `role="alert"` + toast.
+
+### 26. Профиль: пустое имя → email
+
+**Решение:** Empty state имени — форма показывает email (и в шапке, и в профиле), аватар-фолбэк — первая буква email. В форме «Основное» пустое имя блокируется инлайн-ошибкой «Введите имя» (сервер: `Matches(/.*\S.*/, 'Name must not be empty')`), имя > 50 символов — инлайн-ошибка.
+
+---
+
 ## Структура компонента — чеклист
 
 Перед отправкой UI-компонента проверить:
@@ -325,8 +347,13 @@ function validateTerms(isSelected: boolean): string | null {
 | `apps/web/src/lib/format-date.ts` | Общий `formatDate` (используется на страницах встреч и списка) |
 | `playwright.config.ts` | E2E-конфиг (root): 2 webServer (api :3001, web :3000), `reuseExistingServer` |
 | `apps/web/e2e/file-upload.spec.ts` | Playwright e2e: upload→preview→download→delete + клиентская валидация |
+| `apps/web/src/components/user-avatar.tsx` | Круглый аватар: blob fetch `GET /api/user/profile/avatar` с JWT (keyed на `avatarVersion`) или инициалы (имя → первые буквы, иначе первая буква email), `<img alt={name}>` |
+| `apps/web/src/components/profile/avatar-section.tsx` | Загрузка/замена аватара: клиентская валидация `MAX_AVATAR_SIZE`/`ALLOWED_AVATAR_MIME_TYPES` из `@meeting-ai/shared`, инлайн-ошибка, updateUser + bumpAvatarVersion |
+| `apps/web/src/components/profile/general-section.tsx` | Форма «Основное»: имя + email, `PATCH /api/user/profile` → `updateUser()`, 409 → инлайн-ошибка у email, `autoComplete="name"/"email"`, skeleton/disabled+spinner |
+| `apps/web/src/components/profile/password-section.tsx` | Форма «Пароль»: новый + повтор (`new-password`), client-side match check, `PATCH /api/user/password`, инлайн (короткий/несовпадение) + toast (сеть/429) |
+| `apps/web/src/app/(authenticated)/profile/page.tsx` | Страница профиля: 3 stacked Cards (Avatar/General/Password), skeleton при `user === null` |
 | `apps/web/src/components/providers.tsx` | ToastProvider (`placement="bottom end"`), AuthProvider |
-| `apps/web/src/contexts/auth-context.tsx` | Auth: login/register, token в localStorage |
+| `apps/web/src/contexts/auth-context.tsx` | Auth: login/register, token в localStorage, гидрация `GET /api/auth/me`, `updateUser(partial)`, `avatarVersion` |
 | `apps/web/next.config.js` | Rewrites `/api/*` → `localhost:3001/*` |
 | `apps/web/src/app/globals.css` | Глобальные стили (Tailwind + HeroUI) |
 | `apps/web/src/app/layout.tsx` | Root layout |
@@ -342,6 +369,7 @@ function validateTerms(isSelected: boolean): string | null {
 | 2026-07-31 | `file-upload/*` (code review) | RU-aria-labels с миксами языков, нет `aria-live`, touch targets < 44px, дубли `formatDate` и MIME-констант | RU-aria-labels с именем файла, `aria-live="polite"` на ошибках, `min-h-11` на интерактиве, общий `format-date.ts`, `@meeting-ai/shared` |
 | 2026-07-31 | `file-upload/*` (P2 polish, issue #6) | preview только для медиа, дубли `formatBytes`/иконок, нет индикации «обработки» после загрузки | `file-preview.tsx` для всех типов, `file-icon.tsx` + `format-file-size.ts`, `isIndeterminate` прогресс |
 | 2026-07-31 | `file-upload/*` (code review #6 fixes) | дублирование MIME-констант в `file-icon.tsx`, кириллические единицы/`.0` в размерах, blob-фетч для документов, неоднозначный progress | `getFileKind`/`FileKind` в `@meeting-ai/shared`, `formatFileSize` → B/KB/MB/GB/TB, ранний return в preview для не-media, `value={undefined}` в indeterminate, e2e (backend+frontend) |
+| 2026-08-02 | `profile/page.tsx`, `components/profile/*` (T7) | — | паттерны 23–26: 3 stacked Cards + skeleton, инлайн-ошибка 409 с `aria-describedby`, cross-field валидация пароля, empty state «пустое имя → email» |
 
 ### Все исправления (signup/page.tsx)
 
