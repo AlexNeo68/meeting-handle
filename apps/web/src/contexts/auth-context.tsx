@@ -2,17 +2,22 @@
 
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
-interface User {
+export interface User {
   id: string;
   email: string;
+  name: string | null;
+  hasAvatar: boolean;
 }
 
 interface AuthContextValue {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
+  avatarVersion: number;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (partial: Partial<User>) => void;
+  bumpAvatarVersion: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -20,41 +25,73 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [avatarVersion, setAvatarVersion] = useState(0);
+
+  const fetchProfile = useCallback(async (accessToken: string) => {
+    const res = await fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!res.ok) {
+      throw new Error('Не удалось загрузить профиль');
+    }
+
+    return (await res.json()) as User;
+  }, []);
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
 
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-    }
-  }, []);
-
-  const login = useCallback(async (email: string, password: string) => {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new Error(data.message || 'Ошибка авторизации');
+    if (!storedToken) {
+      return;
     }
 
-    const profileRes = await fetch('/api/user/profile', {
-      headers: { Authorization: `Bearer ${data.token}` },
-    });
+    setToken(storedToken);
 
-    const profile = await profileRes.json();
+    let cancelled = false;
 
-    localStorage.setItem('token', data.token);
-    localStorage.setItem('user', JSON.stringify(profile));
-    setToken(data.token);
-    setUser(profile);
-  }, []);
+    fetchProfile(storedToken)
+      .then((profile) => {
+        if (cancelled) return;
+        setUser(profile);
+        localStorage.setItem('user', JSON.stringify(profile));
+      })
+      .catch(() => {
+        if (cancelled) return;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setToken(null);
+        setUser(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchProfile]);
+
+  const login = useCallback(
+    async (email: string, password: string) => {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Ошибка авторизации');
+      }
+
+      localStorage.setItem('token', data.token);
+      setToken(data.token);
+
+      const profile = await fetchProfile(data.token);
+      setUser(profile);
+      localStorage.setItem('user', JSON.stringify(profile));
+    },
+    [fetchProfile],
+  );
 
   const logout = useCallback(() => {
     localStorage.removeItem('token');
@@ -63,14 +100,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateUser = useCallback((partial: Partial<User>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...partial };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const bumpAvatarVersion = useCallback(() => {
+    setAvatarVersion((v) => v + 1);
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
         user,
         token,
         isAuthenticated: !!token,
+        avatarVersion,
         login,
         logout,
+        updateUser,
+        bumpAvatarVersion,
       }}
     >
       {children}

@@ -1,10 +1,16 @@
 // @vitest-environment happy-dom
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
+
 import { ReactNode } from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuthProvider, useAuth } from './auth-context';
 
-const mockUser = { id: 'user-1', email: 'test@example.com' };
+const mockUser = {
+  id: 'user-1',
+  email: 'test@example.com',
+  name: 'Test User',
+  hasAvatar: false,
+};
 const mockToken = 'jwt-token-abc';
 
 function createWrapper() {
@@ -25,20 +31,48 @@ describe('AuthContext', () => {
     expect(result.current.isAuthenticated).toBe(false);
     expect(result.current.user).toBeNull();
     expect(result.current.token).toBeNull();
+    expect(result.current.avatarVersion).toBe(0);
   });
 
-  it('is authenticated when token exists in localStorage', () => {
+  it('hydrates token immediately and fetches fresh profile via GET /api/auth/me', async () => {
     localStorage.setItem('token', mockToken);
-    localStorage.setItem('user', JSON.stringify(mockUser));
+    localStorage.setItem('user', JSON.stringify({ ...mockUser, name: 'Stale Name' }));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => mockUser }),
+    );
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
 
     expect(result.current.isAuthenticated).toBe(true);
-    expect(result.current.user).toEqual(mockUser);
     expect(result.current.token).toBe(mockToken);
+
+    await waitFor(() => expect(result.current.user).toEqual(mockUser));
+
+    expect(fetch).toHaveBeenCalledWith('/api/auth/me', {
+      headers: { Authorization: `Bearer ${mockToken}` },
+    });
+    expect(localStorage.getItem('user')).toBe(JSON.stringify(mockUser));
   });
 
-  it('login calls POST /api/auth/login then GET /api/user/profile and stores token', async () => {
+  it('clears the session when hydration profile fetch fails', async () => {
+    localStorage.setItem('token', mockToken);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, json: async () => ({ message: 'Unauthorized' }) }),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.isAuthenticated).toBe(false));
+
+    expect(result.current.token).toBeNull();
+    expect(result.current.user).toBeNull();
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(localStorage.getItem('user')).toBeNull();
+  });
+
+  it('login calls POST /api/auth/login then GET /api/auth/me and stores token', async () => {
     vi.stubGlobal(
       'fetch',
       vi
@@ -65,7 +99,7 @@ describe('AuthContext', () => {
       body: JSON.stringify({ email: 'test@example.com', password: 'password123' }),
     });
 
-    expect(fetch).toHaveBeenCalledWith('/api/user/profile', {
+    expect(fetch).toHaveBeenCalledWith('/api/auth/me', {
       headers: { Authorization: `Bearer ${mockToken}` },
     });
 
@@ -101,8 +135,14 @@ describe('AuthContext', () => {
   it('logout clears localStorage and resets state', async () => {
     localStorage.setItem('token', mockToken);
     localStorage.setItem('user', JSON.stringify(mockUser));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => mockUser }),
+    );
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.user).toEqual(mockUser));
 
     expect(result.current.isAuthenticated).toBe(true);
 
@@ -115,5 +155,45 @@ describe('AuthContext', () => {
     expect(result.current.user).toBeNull();
     expect(localStorage.getItem('token')).toBeNull();
     expect(localStorage.getItem('user')).toBeNull();
+  });
+
+  it('updateUser merges partial into state and localStorage user', async () => {
+    localStorage.setItem('token', mockToken);
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => mockUser }),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.user).toEqual(mockUser));
+
+    act(() => {
+      result.current.updateUser({ name: 'New Name', hasAvatar: true });
+    });
+
+    expect(result.current.user).toEqual({ ...mockUser, name: 'New Name', hasAvatar: true });
+    expect(localStorage.getItem('user')).toBe(
+      JSON.stringify({ ...mockUser, name: 'New Name', hasAvatar: true }),
+    );
+  });
+
+  it('bumpAvatarVersion increments the avatar version counter', () => {
+    const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
+
+    expect(result.current.avatarVersion).toBe(0);
+
+    act(() => {
+      result.current.bumpAvatarVersion();
+    });
+
+    expect(result.current.avatarVersion).toBe(1);
+
+    act(() => {
+      result.current.bumpAvatarVersion();
+    });
+
+    expect(result.current.avatarVersion).toBe(2);
   });
 });
