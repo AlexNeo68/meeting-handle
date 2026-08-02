@@ -7,9 +7,14 @@ import {
 } from '@nestjs/common';
 import { StreamableFile } from '@nestjs/common';
 import { stat, unlink } from 'node:fs/promises';
+import { Readable } from 'node:stream';
 import { PrismaService } from '../prisma/prisma.service';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { UserService } from './user.service';
+
+jest.mock('node:fs', () => ({
+  createReadStream: jest.fn(() => Readable.from(Buffer.from('avatar-bytes'))),
+}));
 
 jest.mock('node:fs/promises');
 
