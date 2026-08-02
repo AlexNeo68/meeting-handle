@@ -1,16 +1,19 @@
 {
   "active": true,
-  "maxIterations": 20,
-  "maxTurns": 500,
-  "prompt": "Прочитай .claude/ralph.md и следуй правилам оттуда. Возьми следующую открытую Issue из milestone '{milestone}' и реализуй его в '{branch}'",
+  "maxIterations": 50,
+  "maxFixAttempts": 5,
+  "prompt": "Прочитай .claude/ralph.md и следуй правилам оттуда. Возьми открытую Issue из milestone '{milestone}' и реализуй её в '{branch}'. После реализации запусти тесты и доведи их до зелёного. Закрой Issue, когда тесты зелёные и требования выполнены.",
+  "tests": ["npm run test"],
   "phases": [
     {
       "milestone": "P1 (MVP)",
-      "branch": "feature/user-profile"
+      "branch": "feat/user-profile",
+      "tests": ["npm run test:web", "npm run test:api"]
     },
     {
       "milestone": "P2 (Remove avatar)",
-      "branch": "feature/user-profile"
+      "branch": "feat/user-profile",
+      "tests": ["npm run test:web", "npm run test:api"]
     }
   ]
 }
