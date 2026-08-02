@@ -13,8 +13,10 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserId } from '../common/decorators/user-id.decorator';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { GetUserProfileQuery } from './queries/get-user-profile.query';
 import { UpdateUserProfileCommand } from './commands/update-user-profile.command';
@@ -38,6 +40,13 @@ export class UserController {
   @HttpCode(HttpStatus.OK)
   async updateProfile(@UserId() userId: string, @Body() dto: UpdateProfileDto) {
     return this.commandBus.execute(new UpdateUserProfileCommand(userId, dto.name, dto.email));
+  }
+
+  @Patch('password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  async changePassword(@UserId() userId: string, @Body() dto: ChangePasswordDto) {
+    return this.userService.changePassword(userId, dto.password);
   }
 
   @Post('profile/avatar')

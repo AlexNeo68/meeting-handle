@@ -11,6 +11,7 @@ import {
 import { createReadStream } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
 import { basename, join, resolve, sep } from 'node:path';
+import * as bcrypt from 'bcrypt';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { MimeTypeDetector } from '../files/mime-type-detector';
 import { PrismaService } from '../prisma/prisma.service';
@@ -143,6 +144,27 @@ export class UserService {
     const mimeType = detected ?? 'application/octet-stream';
 
     return new StreamableFile(createReadStream(absPath), { type: mimeType });
+  }
+
+  async changePassword(userId: string, password: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id "${userId}" not found`);
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+      select: { id: true },
+    });
+
+    return { message: 'Password updated' };
   }
 
   private async removeStoredAvatar(storagePath: string) {

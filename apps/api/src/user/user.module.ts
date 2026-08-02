@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CqrsModule } from '@nestjs/cqrs';
 import { MulterModule } from '@nestjs/platform-express';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { join, resolve } from 'node:path';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { FileTypeMimeDetector } from '../files/mime-type-detector';
@@ -15,6 +16,12 @@ import { UserLoggedInHandler } from './events/user-logged-in.handler';
 @Module({
   imports: [
     CqrsModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: Number(process.env.THROTTLE_TTL_MS ?? 15 * 60 * 1000),
+        limit: Number(process.env.THROTTLE_LIMIT ?? 5),
+      },
+    ]),
     MulterModule.registerAsync({
       useFactory: () =>
         avatarDiskOptions(resolve(process.env.UPLOAD_DIR ?? join(process.cwd(), 'uploads'))),

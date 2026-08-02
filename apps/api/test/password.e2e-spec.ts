@@ -1,0 +1,86 @@
+import 'dotenv/config';
+import { Test, TestingModule } from '@nestjs/testing';
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ThrottlerStorage } from '@nestjs/throttler';
+import * as request from 'supertest';
+import { AppModule } from '../src/app.module';
+import { PrismaService } from '../src/prisma/prisma.service';
+
+describe('Password change (e2e)', () => {
+  let app: INestApplication;
+  let prisma: PrismaService;
+  let storage: { storage: Map<string, unknown> };
+  let token: string;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    await app.init();
+
+    prisma = app.get(PrismaService);
+    storage = app.get(ThrottlerStorage);
+  });
+
+  beforeEach(async () => {
+    storage.storage.clear();
+
+    await prisma.meetingFile.deleteMany();
+    await prisma.meeting.deleteMany();
+    await prisma.user.deleteMany();
+
+    const userRes = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'password@example.com', password: 'password123' });
+    token = userRes.body.token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  const patchPassword = (password: string, bearer = token) =>
+    request(app.getHttpServer())
+      .patch('/user/password')
+      .set('Authorization', `Bearer ${bearer}`)
+      .send({ password });
+
+  describe('PATCH /user/password', () => {
+    it('should change the password and return 200', async () => {
+      const res = await patchPassword('newpassword123').expect(200);
+
+      expect(res.body).toEqual({ message: 'Password updated' });
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'password@example.com', password: 'newpassword123' })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'password@example.com', password: 'password123' })
+        .expect(401);
+    });
+
+    it('should return 400 for a short password', async () => {
+      await patchPassword('12345').expect(400);
+    });
+
+    it('should return 401 without auth', async () => {
+      await patchPassword('newpassword123', '').expect(401);
+    });
+
+    it('should return 429 after exceeding the request limit', async () => {
+      for (let i = 0; i < 5; i++) {
+        await patchPassword(`newpassword${i}`).expect(200);
+      }
+
+      const res = await patchPassword('newpassword5').expect(429);
+
+      expect(res.body).toBeDefined();
+    });
+  });
+});

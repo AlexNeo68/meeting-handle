@@ -6,20 +6,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { StreamableFile } from '@nestjs/common';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
-import { Readable } from 'node:stream';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { UserService } from './user.service';
-
-jest.mock('node:fs', () => ({
-  createReadStream: jest.fn(() => Readable.from(Buffer.from('avatar-bytes'))),
-}));
 
 jest.mock('node:fs/promises');
 
 describe('UserService', () => {
   let service: UserService;
+  let uploadDir: string;
 
   const mockPrisma = {
     user: {
@@ -32,6 +32,14 @@ describe('UserService', () => {
     detect: jest.fn(),
   };
 
+  beforeAll(() => {
+    uploadDir = mkdtempSync(join(tmpdir(), 'uploads-test-'));
+  });
+
+  afterAll(() => {
+    rmSync(uploadDir, { recursive: true, force: true });
+  });
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -39,7 +47,7 @@ describe('UserService', () => {
       providers: [
         UserService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: UPLOAD_DIR, useValue: '/test/uploads' },
+        { provide: UPLOAD_DIR, useValue: uploadDir },
         { provide: MIME_TYPE_DETECTOR, useValue: mockDetector },
       ],
     }).compile();
@@ -209,7 +217,7 @@ describe('UserService', () => {
 
       const result = await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
 
-      expect(unlink).toHaveBeenCalledWith('/test/uploads/uuid-123/avatar/old.png');
+      expect(unlink).toHaveBeenCalledWith(join(uploadDir, 'uuid-123/avatar/old.png'));
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'uuid-123' },
         data: { avatarStoragePath: 'uuid-123/avatar/avatar.png' },
@@ -261,8 +269,39 @@ describe('UserService', () => {
     });
   });
 
+  describe('changePassword', () => {
+    it('should hash the password, update it and never return the hash', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'uuid-123' });
+      mockPrisma.user.update.mockResolvedValue({ id: 'uuid-123' });
+
+      const result = await service.changePassword('uuid-123', 'newpassword123');
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'uuid-123' },
+        data: { password: expect.any(String) },
+        select: { id: true },
+      });
+      const passwordArg = (mockPrisma.user.update as jest.Mock).mock.calls[0][0].data.password;
+      expect(passwordArg).not.toBe('newpassword123');
+      expect(bcrypt.compareSync('newpassword123', passwordArg)).toBe(true);
+      expect(result).toEqual({ message: 'Password updated' });
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.changePassword('non-existent', 'newpassword123')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
   describe('getAvatar', () => {
     it('should return StreamableFile with detected content type', async () => {
+      const absPath = join(uploadDir, 'uuid-123/avatar/avatar.png');
+      mkdirSync(join(uploadDir, 'uuid-123/avatar'), { recursive: true });
+      writeFileSync(absPath, Buffer.from('avatar-bytes'));
+
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
         avatarStoragePath: 'uuid-123/avatar/avatar.png',
@@ -277,6 +316,10 @@ describe('UserService', () => {
     });
 
     it('should fall back to octet-stream when content type is unknown', async () => {
+      const absPath = join(uploadDir, 'uuid-123/avatar/avatar.png');
+      mkdirSync(join(uploadDir, 'uuid-123/avatar'), { recursive: true });
+      writeFileSync(absPath, Buffer.from('avatar-bytes'));
+
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
         avatarStoragePath: 'uuid-123/avatar/avatar.png',
@@ -308,7 +351,7 @@ describe('UserService', () => {
     it('should throw ForbiddenException on path traversal', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
-        avatarStoragePath: '../../../etc/passwd',
+        avatarStoragePath: '../../../../etc/passwd',
       });
 
       await expect(service.getAvatar('uuid-123')).rejects.toThrow(ForbiddenException);
