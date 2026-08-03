@@ -115,15 +115,15 @@ export class UserService {
 
       const storagePath = join(userId, 'avatar', basename(file.path));
 
-      if (user.avatarStoragePath) {
-        await this.removeStoredAvatar(user.avatarStoragePath);
-      }
-
       const updated = await this.prisma.user.update({
         where: { id: userId },
         data: { avatarStoragePath: storagePath },
         select: PROFILE_SELECT,
       });
+
+      if (user.avatarStoragePath) {
+        await this.removeStoredAvatar(user.avatarStoragePath);
+      }
 
       return this.toProfile(updated);
     } catch (err) {

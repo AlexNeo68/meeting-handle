@@ -296,6 +296,46 @@ describe('UserService', () => {
       expect(result.hasAvatar).toBe(true);
     });
 
+    it('should update the DB before unlinking the old avatar', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: 'uuid-123/avatar/old.png',
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: 'uuid-123/avatar/avatar.png',
+      });
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
+
+      const updateOrder = (mockPrisma.user.update as jest.Mock).mock.invocationCallOrder[0];
+      const unlinkOrder = (unlink as jest.Mock).mock.invocationCallOrder[0];
+      expect(updateOrder).toBeLessThan(unlinkOrder);
+    });
+
+    it('should not unlink the old avatar when the DB update fails', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: 'uuid-123/avatar/old.png',
+      });
+      mockPrisma.user.update.mockRejectedValue(new Error('database unreachable'));
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await expect(
+        service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png')),
+      ).rejects.toThrow('database unreachable');
+
+      expect(mockPrisma.user.update).toHaveBeenCalled();
+      expect(unlink).not.toHaveBeenCalledWith(join(uploadDir, 'uuid-123/avatar/old.png'));
+    });
+
     it('should reject a spoofed Content-Type when the real content is not an allowed image', async () => {
       mockDetector.detect.mockResolvedValue('application/pdf');
       (unlink as jest.Mock).mockResolvedValue(undefined);
