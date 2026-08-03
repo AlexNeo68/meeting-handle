@@ -10,7 +10,7 @@ import {
   TextField,
   toast,
 } from '@heroui/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { translateApiError } from '@/lib/api-errors';
 
@@ -34,6 +34,15 @@ export default function GeneralSection() {
   const [isSaving, setIsSaving] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.name !== undefined) {
+      setName((prev) => (user.name ?? '') === prev ? prev : user.name ?? '');
+    }
+    if (user?.email !== undefined) {
+      setEmail((prev) => user.email === prev ? prev : user.email);
+    }
+  }, [user?.name, user?.email]);
 
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
