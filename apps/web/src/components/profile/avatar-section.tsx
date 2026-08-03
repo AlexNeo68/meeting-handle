@@ -4,6 +4,7 @@ import { ALLOWED_AVATAR_MIME_TYPES, AVATAR_ACCEPT_ATTR, MAX_AVATAR_SIZE } from '
 import { Button, toast } from '@heroui/react';
 import { useCallback, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { translateApiError } from '@/lib/api-errors';
 import UserAvatar from '../user-avatar';
 
 export default function AvatarSection() {
@@ -37,7 +38,7 @@ export default function AvatarSection() {
           const data = (await res.json().catch(() => null)) as { message?: string } | null;
 
           if (!res.ok) {
-            const message = data?.message || 'Не удалось загрузить аватар';
+            const message = translateApiError(data?.message, 'Не удалось загрузить аватар');
             setError(message);
             toast.danger(message);
             return;
@@ -95,7 +96,7 @@ export default function AvatarSection() {
         const data = (await res.json().catch(() => null)) as { message?: string } | null;
 
         if (!res.ok) {
-          const message = data?.message || 'Не удалось удалить аватар';
+          const message = translateApiError(data?.message, 'Не удалось удалить аватар');
           setError(message);
           toast.danger(message);
           return;

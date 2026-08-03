@@ -12,6 +12,7 @@ import {
 } from '@heroui/react';
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { translateApiError } from '@/lib/api-errors';
 
 function validateNewPassword(value: string): string | null {
   if (!value) return 'Введите новый пароль';
@@ -54,7 +55,7 @@ export default function PasswordSection() {
         const data = (await res.json().catch(() => null)) as { message?: string } | null;
 
         if (!res.ok) {
-          const message = data?.message ?? 'Не удалось изменить пароль';
+          const message = translateApiError(data?.message, 'Не удалось изменить пароль');
           setError(message);
           toast.danger(message);
           return;
