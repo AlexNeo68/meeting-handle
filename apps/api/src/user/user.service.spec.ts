@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { UserService } from './user.service';
@@ -197,6 +198,23 @@ describe('UserService', () => {
       await expect(service.updateProfile('non-existent', { name: 'Test' })).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should throw ConflictException when update races on a unique email (P2002)', async () => {
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: 'uuid-123', email: 'user@example.com' })
+        .mockResolvedValueOnce(null);
+      mockPrisma.user.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`email`)',
+          { code: 'P2002', clientVersion: '7.9.0', meta: { target: ['email'] } },
+        ),
+      );
+
+      await expect(service.updateProfile('uuid-123', { email: 'new@example.com' })).rejects.toThrow(
+        ConflictException,
+      );
+      expect(mockPrisma.user.update).toHaveBeenCalled();
     });
   });
 

@@ -13,6 +13,7 @@ import { stat, unlink } from 'node:fs/promises';
 import { basename, join, resolve, sep } from 'node:path';
 import * as bcrypt from 'bcrypt';
 import { ALLOWED_AVATAR_MIME_TYPES } from '@meeting-ai/shared';
+import { Prisma } from '../../generated/prisma/client';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { MimeTypeDetector } from '../files/mime-type-detector';
 import { PrismaService } from '../prisma/prisma.service';
@@ -76,13 +77,20 @@ export class UserService {
       updateData.email = data.email;
     }
 
-    const updated = await this.prisma.user.update({
-      where: { id: userId },
-      data: updateData,
-      select: PROFILE_SELECT,
-    });
+    try {
+      const updated = await this.prisma.user.update({
+        where: { id: userId },
+        data: updateData,
+        select: PROFILE_SELECT,
+      });
 
-    return this.toProfile(updated);
+      return this.toProfile(updated);
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException('Email already exists');
+      }
+      throw err;
+    }
   }
 
   async uploadAvatar(userId: string, file?: Express.Multer.File) {
