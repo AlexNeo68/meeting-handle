@@ -4,6 +4,7 @@ import { ACCEPT_ATTR, isAllowedMime, MAX_FILE_SIZE } from '@meeting-ai/shared';
 import { Button, ProgressBar, Spinner, toast } from '@heroui/react';
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { translateApiError } from '@/lib/api-errors';
 
 export { ACCEPT_ATTR, isAllowedMime, MAX_FILE_SIZE };
 
@@ -86,7 +87,7 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
           }
           return;
         }
-        toast.danger(parseErrorStatus(xhr.responseText, 'Не удалось загрузить файл'));
+        toast.danger(translateApiError(parseErrorStatus(xhr.responseText), 'Не удалось загрузить файл'));
       };
 
       xhr.onerror = () => {

@@ -186,6 +186,25 @@ describe('FileUpload', () => {
     expect(FakeXMLHttpRequest.instances).toHaveLength(0);
   });
 
+  it('translates a server size-limit key to Russian in the toast', async () => {
+    renderUpload();
+
+    selectFile(makeFile('notes.pdf', 'application/pdf'));
+
+    await waitFor(() => {
+      expect(FakeXMLHttpRequest.instances).toHaveLength(1);
+    });
+
+    const xhr = FakeXMLHttpRequest.instances[0];
+    xhr.status = 400;
+    xhr.responseText = JSON.stringify({ message: 'File size exceeds 100 MB limit' });
+    xhr.onload?.();
+
+    await waitFor(() => {
+      expect(toastDanger).toHaveBeenCalledWith('Файл слишком большой');
+    });
+  });
+
   it('shows network toast on upload error', async () => {
     renderUpload();
 
