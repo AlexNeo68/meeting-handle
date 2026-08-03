@@ -1,16 +1,7 @@
 'use client';
 
-import {
-  Button,
-  FieldError,
-  Form,
-  Input,
-  Label,
-  Spinner,
-  TextField,
-  toast,
-} from '@heroui/react';
-import { useCallback, useEffect, useState } from 'react';
+import { Button, FieldError, Form, Input, Label, Spinner, TextField, toast } from '@heroui/react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { translateApiError } from '@/lib/api-errors';
 
@@ -34,15 +25,27 @@ export default function GeneralSection() {
   const [isSaving, setIsSaving] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const nameDirtyRef = useRef(false);
+  const emailDirtyRef = useRef(false);
 
   useEffect(() => {
-    if (user?.name !== undefined) {
-      setName((prev) => (user.name ?? '') === prev ? prev : user.name ?? '');
+    if (!nameDirtyRef.current && user?.name !== undefined) {
+      setName(user.name ?? '');
     }
-    if (user?.email !== undefined) {
-      setEmail((prev) => user.email === prev ? prev : user.email);
+    if (!emailDirtyRef.current && user?.email !== undefined) {
+      setEmail(user.email);
     }
   }, [user?.name, user?.email]);
+
+  const handleNameChange = useCallback((value: string) => {
+    nameDirtyRef.current = true;
+    setName(value);
+  }, []);
+
+  const handleEmailChange = useCallback((value: string) => {
+    emailDirtyRef.current = true;
+    setEmail(value);
+  }, []);
 
   const onSubmit = useCallback(
     async (e: React.FormEvent<HTMLFormElement>) => {
@@ -108,13 +111,24 @@ export default function GeneralSection() {
           </div>
         )}
 
-        <TextField name="name" validate={validateName} value={name} onChange={setName}>
+        <TextField name="name" validate={validateName} value={name} onChange={handleNameChange}>
           <Label>Имя</Label>
-          <Input autoComplete="name" className="w-full" placeholder="Ваше имя" variant="secondary" />
+          <Input
+            autoComplete="name"
+            className="w-full"
+            placeholder="Ваше имя"
+            variant="secondary"
+          />
           <FieldError />
         </TextField>
 
-        <TextField name="email" type="email" validate={validateEmail} value={email} onChange={setEmail}>
+        <TextField
+          name="email"
+          type="email"
+          validate={validateEmail}
+          value={email}
+          onChange={handleEmailChange}
+        >
           <Label>Email</Label>
           <Input
             autoComplete="email"
@@ -127,7 +141,12 @@ export default function GeneralSection() {
         </TextField>
 
         {emailError && (
-          <p id="general-email-error" role="alert" aria-live="polite" className="text-sm text-danger">
+          <p
+            id="general-email-error"
+            role="alert"
+            aria-live="polite"
+            className="text-sm text-danger"
+          >
             {emailError}
           </p>
         )}
