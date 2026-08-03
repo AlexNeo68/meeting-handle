@@ -180,4 +180,5 @@ Controller → Service → Prisma
 - Для сложной логики — CQRS (папки `commands/` и `queries/`). Для простого CRUD — Service.
 - DTO через `class-validator` / `class-transformer`.
 - Обработка ошибок через встроенные NestJS Exception Filters.
+- **Язык ошибок**: API возвращает пользовательские сообщения на английском как стабильные ключи; перевод на русский — единый модуль фронтенда `apps/web/src/lib/api-errors.ts` (`translateApiError`). Не возвращай локализованные (русские) сообщения из API.
 - `@Global()` модули (PrismaModule) не импортировать в feature module — они доступны без импорта.

@@ -91,12 +91,12 @@ describe('User Avatar (e2e)', () => {
       expect(webp.body.hasAvatar).toBe(true);
     });
 
-    it('should return 400 with a Russian 5 MB message for a file over the size limit', async () => {
+    it('should return 400 with an English 5 MB size-limit key for a file over the size limit', async () => {
       const res = await upload(Buffer.alloc(5 * 1024 * 1024 + 1), 'big.png', 'image/png').expect(
         400,
       );
 
-      expect(res.body.message).toBe('Размер файла превышает лимит 5 МБ');
+      expect(res.body.message).toBe('File size exceeds 5 MB limit');
     });
 
     it('should return 400 for an unsupported MIME type', async () => {
