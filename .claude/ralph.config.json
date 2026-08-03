@@ -7,18 +7,6 @@
   "gates": ["npm run lint"],
   "phases": [
     {
-      "milestone": "P1 (MVP)",
-      "branch": "feat/user-profile",
-      "tests": ["npm run test:web", "npm run test:api"],
-      "gates": ["npm run lint"]
-    },
-    {
-      "milestone": "P2 (Remove avatar)",
-      "branch": "feat/remove-avatar",
-      "tests": ["npm run test:web", "npm run test:api"],
-      "gates": ["npm run lint"]
-    },
-    {
       "milestone": "P3 (Security & review fixes)",
       "branch": "feat/security-review-fixes",
       "tests": ["npm run test:web", "npm run test:api"],
