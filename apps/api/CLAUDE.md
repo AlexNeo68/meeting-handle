@@ -76,8 +76,13 @@ apps/api/
 │   │   └── dto/
 │   │       └── create-meeting.dto.ts
 │   └── common/               # общие утилиты
-│       └── decorators/
-│           └── user-id.decorator.ts
+│       ├── decorators/
+│       │   └── user-id.decorator.ts
+│       ├── filters/
+│       │   └── all-exceptions.filter.ts
+│       └── utils/
+│           ├── file-name.util.ts
+│           └── profile-mapper.util.ts  # единый маппинг профиля (toProfile) для UserService и GetMeHandler
 ├── test/                     # E2E тесты
 │   ├── auth.e2e-spec.ts
 │   ├── meetings.e2e-spec.ts

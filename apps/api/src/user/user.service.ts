@@ -14,6 +14,7 @@ import { basename, join, resolve, sep } from 'node:path';
 import * as bcrypt from 'bcrypt';
 import { ALLOWED_AVATAR_MIME_TYPES } from '@meeting-ai/shared';
 import { Prisma } from '../../generated/prisma/client';
+import { toProfile } from '../common/utils/profile-mapper.util';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { MimeTypeDetector } from '../files/mime-type-detector';
 import { PrismaService } from '../prisma/prisma.service';
@@ -45,7 +46,7 @@ export class UserService {
       throw new NotFoundException(`User with id "${userId}" not found`);
     }
 
-    return this.toProfile(user);
+    return toProfile(user);
   }
 
   async updateProfile(userId: string, data: { name?: string; email?: string }) {
@@ -84,7 +85,7 @@ export class UserService {
         select: PROFILE_SELECT,
       });
 
-      return this.toProfile(updated);
+      return toProfile(updated);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         throw new ConflictException('Email already exists');
@@ -125,7 +126,7 @@ export class UserService {
         await this.removeStoredAvatar(user.avatarStoragePath);
       }
 
-      return this.toProfile(updated);
+      return toProfile(updated);
     } catch (err) {
       await unlink(file.path).catch(() => undefined);
       throw err;
@@ -226,19 +227,5 @@ export class UserService {
       throw new ForbiddenException('Invalid avatar path');
     }
     return absPath;
-  }
-
-  private toProfile(user: {
-    id: string;
-    email: string;
-    name: string | null;
-    avatarStoragePath: string | null;
-  }) {
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      hasAvatar: user.avatarStoragePath !== null,
-    };
   }
 }

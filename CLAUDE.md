@@ -59,7 +59,7 @@ meeting-ai/
 │   │       ├── user/        # /user/profile, /user/password (rate limit user+IP), avatar
 │   │       ├── meetings/    # CRUD встреч
 │   │       ├── files/       # загрузка/список/скачивание/просмотр/удаление файлов
-│   │       └── common/      # guards, filters
+│   │       └── common/      # decorators, filters, utils (в т.ч. единый маппинг профиля toProfile)
 │   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
 │       ├── src/
 │       │   ├── app/         # /, /login, /signup, (authenticated) (создание + список встреч), (authenticated)/meetings/[id], (authenticated)/profile
