@@ -71,6 +71,10 @@ describe('Password change (e2e)', () => {
       await patchPassword('12345').expect(400);
     });
 
+    it('should return 400 when the new password matches the current one', async () => {
+      await patchPassword('password123').expect(400);
+    });
+
     it('should return 401 without auth', async () => {
       await patchPassword('newpassword123', '').expect(401);
     });

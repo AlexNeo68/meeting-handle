@@ -243,7 +243,10 @@ describe('UserService', () => {
       });
       (unlink as jest.Mock).mockResolvedValue(undefined);
 
-      const result = await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
+      const result = await service.uploadAvatar(
+        'uuid-123',
+        file('/uploads/uuid-123/avatar/avatar.png'),
+      );
 
       expect(unlink).toHaveBeenCalledWith(join(uploadDir, 'uuid-123/avatar/old.png'));
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
@@ -267,9 +270,9 @@ describe('UserService', () => {
       mockPrisma.user.findUnique.mockResolvedValue(null);
       (unlink as jest.Mock).mockResolvedValue(undefined);
 
-      await expect(service.uploadAvatar('uuid-123', file('/uploads/new/avatar.png'))).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.uploadAvatar('uuid-123', file('/uploads/new/avatar.png')),
+      ).rejects.toThrow(NotFoundException);
 
       expect(unlink).toHaveBeenCalledWith('/uploads/new/avatar.png');
       expect(mockPrisma.user.update).not.toHaveBeenCalled();
@@ -290,7 +293,10 @@ describe('UserService', () => {
       });
       (unlink as jest.Mock).mockRejectedValue(new Error('EACCES: permission denied'));
 
-      const result = await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
+      const result = await service.uploadAvatar(
+        'uuid-123',
+        file('/uploads/uuid-123/avatar/avatar.png'),
+      );
 
       expect(mockPrisma.user.update).toHaveBeenCalled();
       expect(result.hasAvatar).toBe(true);
@@ -377,7 +383,10 @@ describe('UserService', () => {
         avatarStoragePath: 'uuid-123/avatar/avatar.png',
       });
 
-      const result = await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
+      const result = await service.uploadAvatar(
+        'uuid-123',
+        file('/uploads/uuid-123/avatar/avatar.png'),
+      );
 
       expect(mockDetector.detect).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
       expect(result.hasAvatar).toBe(true);
@@ -462,6 +471,27 @@ describe('UserService', () => {
       await expect(service.changePassword('non-existent', 'newpassword123')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should throw BadRequestException when the new password matches the current one', async () => {
+      const currentHash = await bcrypt.hash('password123', 10);
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'uuid-123', password: currentHash });
+
+      await expect(service.changePassword('uuid-123', 'password123')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should allow a new password that differs from the current one', async () => {
+      const currentHash = await bcrypt.hash('password123', 10);
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'uuid-123', password: currentHash });
+      mockPrisma.user.update.mockResolvedValue({ id: 'uuid-123' });
+
+      const result = await service.changePassword('uuid-123', 'newpassword123');
+
+      expect(mockPrisma.user.update).toHaveBeenCalled();
+      expect(result).toEqual({ message: 'Password updated' });
     });
   });
 

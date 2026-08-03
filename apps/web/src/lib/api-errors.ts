@@ -15,6 +15,7 @@ const API_ERROR_TRANSLATIONS: Record<string, string> = {
   'password must be a string': 'Пароль должен быть строкой',
   'password must be longer than or equal to 6 characters':
     'Пароль должен содержать минимум 6 символов',
+  'New password must differ from the current one': 'Новый пароль должен отличаться от текущего',
   'File size exceeds 100 MB limit': 'Файл слишком большой',
   'Insufficient storage': 'Недостаточно места на сервере',
   'Too Many Requests': 'Слишком много попыток. Попробуйте позже.',

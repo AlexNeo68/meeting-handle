@@ -22,6 +22,12 @@ describe('translateApiError', () => {
     expect(translateApiError('password must be a string')).toBe('Пароль должен быть строкой');
   });
 
+  it('maps the duplicate-password rejection to Russian', () => {
+    expect(translateApiError('New password must differ from the current one')).toBe(
+      'Новый пароль должен отличаться от текущего',
+    );
+  });
+
   it('maps generic server errors to Russian', () => {
     expect(translateApiError('File size exceeds 100 MB limit')).toBe('Файл слишком большой');
     expect(translateApiError('Insufficient storage')).toBe('Недостаточно места на сервере');
