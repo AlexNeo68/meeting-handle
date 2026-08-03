@@ -83,6 +83,22 @@ describe('Auth (e2e)', () => {
         .expect(409);
     });
 
+    it('should return 409 (not 500) when two concurrent registrations race on the same email', async () => {
+      const attempts = await Promise.all([
+        request(app.getHttpServer())
+          .post('/auth/register')
+          .send({ email: 'race@example.com', password: 'password123' }),
+        request(app.getHttpServer())
+          .post('/auth/register')
+          .send({ email: 'race@example.com', password: 'password123' }),
+      ]);
+
+      const statuses = attempts.map((res) => res.status).sort();
+      expect(statuses).toContain(201);
+      expect(statuses).toContain(409);
+      expect(statuses).not.toContain(500);
+    });
+
     it('should return 400 for invalid email', async () => {
       await request(app.getHttpServer())
         .post('/auth/register')
