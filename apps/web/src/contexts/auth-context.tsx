@@ -124,14 +124,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   }, []);
 
-  const updateUser = useCallback((partial: Partial<User>) => {
-    setUser((prev) => {
-      if (!prev) return prev;
-      const next = { ...prev, ...partial };
+  const updateUser = useCallback(
+    (partial: Partial<User>) => {
+      if (!user) return;
+      const next = { ...user, ...partial };
+      setUser(next);
       localStorage.setItem('user', JSON.stringify(next));
-      return next;
-    });
-  }, []);
+    },
+    [user],
+  );
 
   const bumpAvatarVersion = useCallback(() => {
     setAvatarVersion((v) => v + 1);
