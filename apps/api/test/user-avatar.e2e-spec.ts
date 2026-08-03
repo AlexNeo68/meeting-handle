@@ -145,6 +145,28 @@ describe('User Avatar (e2e)', () => {
       expect((res.body as Buffer).toString('utf8')).toBe('fake-jpeg-bytes');
     });
 
+    it('should persist the detected MIME type at upload', async () => {
+      detectorMock.detect.mockResolvedValue('image/webp');
+      await upload(Buffer.from('fake-webp-bytes'), 'photo.webp', 'image/webp').expect(201);
+
+      const user = await prisma.user.findUnique({ where: { email: 'avatar@example.com' } });
+      expect(user!.avatarMimeType).toBe('image/webp');
+    });
+
+    it('should serve the stored MIME type without re-detecting on every GET', async () => {
+      await upload(Buffer.from('fake-jpeg-bytes'), 'photo.jpg', 'image/jpeg').expect(201);
+
+      detectorMock.detect.mockClear();
+
+      const res = await request(app.getHttpServer())
+        .get('/user/profile/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.headers['content-type']).toContain('image/jpeg');
+      expect(detectorMock.detect).not.toHaveBeenCalled();
+    });
+
     it('should return 404 when the user has no avatar', async () => {
       await request(app.getHttpServer())
         .get('/user/profile/avatar')

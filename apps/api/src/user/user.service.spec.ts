@@ -251,7 +251,7 @@ describe('UserService', () => {
       expect(unlink).toHaveBeenCalledWith(join(uploadDir, 'uuid-123/avatar/old.png'));
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'uuid-123' },
-        data: { avatarStoragePath: 'uuid-123/avatar/avatar.png' },
+        data: { avatarStoragePath: 'uuid-123/avatar/avatar.png', avatarMimeType: 'image/png' },
         select: { id: true, email: true, name: true, avatarStoragePath: true },
       });
       expect(result).toEqual({
@@ -412,7 +412,7 @@ describe('UserService', () => {
       expect(unlink).toHaveBeenCalledWith(join(uploadDir, 'uuid-123/avatar/avatar.png'));
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'uuid-123' },
-        data: { avatarStoragePath: null },
+        data: { avatarStoragePath: null, avatarMimeType: null },
         select: { id: true },
       });
       expect(result).toEqual({ message: 'Avatar deleted' });
@@ -496,24 +496,43 @@ describe('UserService', () => {
   });
 
   describe('getAvatar', () => {
-    it('should return StreamableFile with detected content type', async () => {
+    it('should serve the MIME type stored at upload without re-detecting on every GET', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
         avatarStoragePath: 'uuid-123/avatar/avatar.png',
+        avatarMimeType: 'image/png',
       });
       (stat as jest.Mock).mockResolvedValue({ size: 100 });
-      mockDetector.detect.mockResolvedValue('image/png');
 
       const result = await service.getAvatar('uuid-123');
 
       expect(result).toBeInstanceOf(StreamableFile);
       expect(result.getHeaders().type).toBe('image/png');
+      expect(mockDetector.detect).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to detection when the stored MIME is missing (legacy avatar)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        avatarStoragePath: 'uuid-123/avatar/avatar.png',
+        avatarMimeType: null,
+      });
+      (stat as jest.Mock).mockResolvedValue({ size: 100 });
+      mockDetector.detect.mockResolvedValue('image/webp');
+
+      const result = await service.getAvatar('uuid-123');
+
+      expect(result.getHeaders().type).toBe('image/webp');
+      expect(mockDetector.detect).toHaveBeenCalledWith(
+        join(uploadDir, 'uuid-123/avatar/avatar.png'),
+      );
     });
 
     it('should fall back to octet-stream when content type is unknown', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
         avatarStoragePath: 'uuid-123/avatar/avatar.png',
+        avatarMimeType: null,
       });
       (stat as jest.Mock).mockResolvedValue({ size: 100 });
       mockDetector.detect.mockResolvedValue(null);
@@ -524,7 +543,11 @@ describe('UserService', () => {
     });
 
     it('should throw NotFoundException when user has no avatar', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: 'uuid-123', avatarStoragePath: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        avatarStoragePath: null,
+        avatarMimeType: null,
+      });
 
       await expect(service.getAvatar('uuid-123')).rejects.toThrow(NotFoundException);
     });
@@ -533,6 +556,7 @@ describe('UserService', () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
         avatarStoragePath: 'uuid-123/avatar/ghost.png',
+        avatarMimeType: 'image/png',
       });
       (stat as jest.Mock).mockRejectedValue(Object.assign(new Error('ENOENT'), { code: 'ENOENT' }));
 
@@ -543,6 +567,7 @@ describe('UserService', () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'uuid-123',
         avatarStoragePath: '../../../../etc/passwd',
+        avatarMimeType: 'image/png',
       });
 
       await expect(service.getAvatar('uuid-123')).rejects.toThrow(ForbiddenException);
