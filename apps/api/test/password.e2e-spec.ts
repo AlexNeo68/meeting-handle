@@ -150,3 +150,58 @@ describe('Password change (e2e)', () => {
     });
   });
 });
+
+describe('Password change — rate limit with trust proxy disabled (default)', () => {
+  let app: NestExpressApplication;
+  let prisma: PrismaService;
+  let storage: { storage: Map<string, unknown> };
+  let token: string;
+
+  beforeAll(async () => {
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
+    await app.init();
+
+    prisma = app.get(PrismaService);
+    storage = app.get(ThrottlerStorage);
+  });
+
+  beforeEach(async () => {
+    storage.storage.clear();
+
+    await prisma.meetingFile.deleteMany();
+    await prisma.meeting.deleteMany();
+    await prisma.user.deleteMany();
+
+    const userRes = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: 'noproxy@example.com', password: 'password123' });
+    token = userRes.body.token;
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('should NOT trust the X-Forwarded-For header when trust proxy is off, so spoofed IPs cannot bypass the limit', async () => {
+    for (let i = 0; i < 5; i++) {
+      await request(app.getHttpServer())
+        .patch('/user/password')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Forwarded-For', `203.0.113.${i}`)
+        .send({ password: `newpassword${i}` })
+        .expect(200);
+    }
+
+    await request(app.getHttpServer())
+      .patch('/user/password')
+      .set('Authorization', `Bearer ${token}`)
+      .set('X-Forwarded-For', '203.0.113.99')
+      .send({ password: 'newpassword99' })
+      .expect(429);
+  });
+});
