@@ -12,6 +12,7 @@ import { createReadStream } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
 import { basename, join, resolve, sep } from 'node:path';
 import * as bcrypt from 'bcrypt';
+import { ALLOWED_AVATAR_MIME_TYPES } from '@meeting-ai/shared';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { MimeTypeDetector } from '../files/mime-type-detector';
 import { PrismaService } from '../prisma/prisma.service';
@@ -90,6 +91,11 @@ export class UserService {
     }
 
     try {
+      const detected = await this.detector.detect(file.path);
+      if (!detected || !ALLOWED_AVATAR_MIME_TYPES.includes(detected)) {
+        throw new BadRequestException('Avatar content does not match allowed image types');
+      }
+
       const user = await this.prisma.user.findUnique({
         where: { id: userId },
         select: { id: true, email: true, name: true, avatarStoragePath: true },

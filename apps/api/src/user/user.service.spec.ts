@@ -51,6 +51,7 @@ describe('UserService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockDetector.detect.mockResolvedValue('image/png');
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -274,6 +275,53 @@ describe('UserService', () => {
       const result = await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
 
       expect(mockPrisma.user.update).toHaveBeenCalled();
+      expect(result.hasAvatar).toBe(true);
+    });
+
+    it('should reject a spoofed Content-Type when the real content is not an allowed image', async () => {
+      mockDetector.detect.mockResolvedValue('application/pdf');
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await expect(
+        service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png')),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockDetector.detect).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
+      expect(unlink).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should reject an avatar whose content type cannot be detected', async () => {
+      mockDetector.detect.mockResolvedValue(null);
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await expect(
+        service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png')),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(unlink).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should accept when the detected content type is an allowed image type', async () => {
+      mockDetector.detect.mockResolvedValue('image/png');
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: null,
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: 'uuid-123/avatar/avatar.png',
+      });
+
+      const result = await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
+
+      expect(mockDetector.detect).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
       expect(result.hasAvatar).toBe(true);
     });
   });
