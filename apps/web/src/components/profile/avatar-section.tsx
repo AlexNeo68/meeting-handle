@@ -7,9 +7,10 @@ import { useAuth } from '@/contexts/auth-context';
 import UserAvatar from '../user-avatar';
 
 export default function AvatarSection() {
-  const { token, updateUser, bumpAvatarVersion } = useAuth();
+  const { token, user, updateUser, bumpAvatarVersion } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const openDialog = useCallback(() => {
@@ -80,20 +81,67 @@ export default function AvatarSection() {
     [isUploading, uploadAvatar],
   );
 
+  const removeAvatar = useCallback(() => {
+    if (!token || isDeleting) return;
+
+    setIsDeleting(true);
+    setError(null);
+
+    fetch('/api/user/profile/avatar', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (res) => {
+        const data = (await res.json().catch(() => null)) as { message?: string } | null;
+
+        if (!res.ok) {
+          const message = data?.message || 'Не удалось удалить аватар';
+          setError(message);
+          toast.danger(message);
+          return;
+        }
+
+        updateUser({ hasAvatar: false });
+        bumpAvatarVersion();
+        toast.success('Аватар удалён');
+      })
+      .catch(() => {
+        setError('Ошибка сети. Попробуйте ещё раз.');
+        toast.danger('Ошибка сети. Попробуйте ещё раз.');
+      })
+      .finally(() => {
+        setIsDeleting(false);
+      });
+  }, [token, isDeleting, updateUser, bumpAvatarVersion]);
+
   return (
     <div className="flex items-center gap-6">
-      <UserAvatar size={96} isUploading={isUploading} />
+      <UserAvatar size={96} isUploading={isUploading || isDeleting} />
 
       <div className="flex flex-col items-start gap-2">
-        <Button
-          className="min-h-11"
-          isDisabled={isUploading}
-          isPending={isUploading}
-          onPress={openDialog}
-          aria-describedby={error ? 'avatar-section-error' : undefined}
-        >
-          {({ isPending }) => (isPending ? 'Загрузка...' : 'Загрузить аватар')}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            className="min-h-11"
+            isDisabled={isUploading || isDeleting}
+            isPending={isUploading}
+            onPress={openDialog}
+            aria-describedby={error ? 'avatar-section-error' : undefined}
+          >
+            {({ isPending }) => (isPending ? 'Загрузка...' : 'Загрузить аватар')}
+          </Button>
+
+          <Button
+            aria-label="Удалить аватар"
+            className="min-h-11"
+            variant="tertiary"
+            isDisabled={isUploading || isDeleting || !user?.hasAvatar}
+            isPending={isDeleting}
+            onPress={removeAvatar}
+            aria-describedby={error ? 'avatar-section-error' : undefined}
+          >
+            {({ isPending }) => (isPending ? 'Удаление...' : 'Удалить')}
+          </Button>
+        </div>
 
         <input
           ref={inputRef}

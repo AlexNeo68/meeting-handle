@@ -278,6 +278,60 @@ describe('UserService', () => {
     });
   });
 
+  describe('removeAvatar', () => {
+    it('should unlink the avatar file, clear avatarStoragePath and return a message', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        avatarStoragePath: 'uuid-123/avatar/avatar.png',
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: null,
+      });
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      const result = await service.removeAvatar('uuid-123');
+
+      expect(unlink).toHaveBeenCalledWith(join(uploadDir, 'uuid-123/avatar/avatar.png'));
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
+        where: { id: 'uuid-123' },
+        data: { avatarStoragePath: null },
+        select: { id: true },
+      });
+      expect(result).toEqual({ message: 'Avatar deleted' });
+    });
+
+    it('should clear avatarStoragePath even when the file is already missing on disk (ENOENT tolerated)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        avatarStoragePath: 'uuid-123/avatar/ghost.png',
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: null,
+        avatarStoragePath: null,
+      });
+      (unlink as jest.Mock).mockRejectedValue(
+        Object.assign(new Error('ENOENT'), { code: 'ENOENT' }),
+      );
+
+      const result = await service.removeAvatar('uuid-123');
+
+      expect(mockPrisma.user.update).toHaveBeenCalled();
+      expect(result).toEqual({ message: 'Avatar deleted' });
+    });
+
+    it('should throw NotFoundException when user not found', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue(null);
+
+      await expect(service.removeAvatar('non-existent')).rejects.toThrow(NotFoundException);
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('changePassword', () => {
     it('should hash the password, update it and never return the hash', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({ id: 'uuid-123' });

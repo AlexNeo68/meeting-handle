@@ -55,7 +55,7 @@ apps/web/
 │   │   ├── user-avatar.tsx    # круглый аватар (blob fetch с JWT) или инициалы, keyed на avatarVersion
 │   │   ├── header.tsx         # блок пользователя (аватар + имя/email) → /profile, кнопка «Выйти»
 │   │   ├── profile/           # секции страницы профиля
-│   │   │   ├── avatar-section.tsx  # загрузка/замена аватара (клиентская валидация 5MB/MIME)
+│   │   │   ├── avatar-section.tsx  # загрузка/замена/удаление аватара (клиентская валидация 5MB/MIME, DELETE + updateUser)
 │   │   │   ├── general-section.tsx # имя + email → PATCH /api/user/profile → updateUser(); 409 → инлайн-ошибка
 │   │   │   └── password-section.tsx # смена пароля → PATCH /api/user/password; короткий/несовпадение → инлайн
 │   │   ├── file-upload/        # file-upload, file-list, file-item, file-preview, file-icon, index

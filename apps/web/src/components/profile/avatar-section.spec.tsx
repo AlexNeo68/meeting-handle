@@ -27,11 +27,16 @@ function makeFile(name: string, type: string, size = 1024): File {
   return new File([new ArrayBuffer(size)], name, { type });
 }
 
-function renderSection() {
+function renderSection(userOverrides: Partial<{ hasAvatar: boolean }> = {}) {
   const updateUser = vi.fn();
   const bumpAvatarVersion = vi.fn();
   mockUseAuth.mockReturnValue({
-    user: { id: 'user-1', email: 'ivan@example.com', name: 'Иван Петров', hasAvatar: false },
+    user: {
+      id: 'user-1',
+      email: 'ivan@example.com',
+      name: 'Иван Петров',
+      hasAvatar: userOverrides.hasAvatar ?? false,
+    },
     token: 'jwt-token',
     avatarVersion: 0,
     updateUser,
@@ -135,6 +140,54 @@ describe('AvatarSection', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('alert')).toHaveTextContent('Unsupported avatar type');
+    });
+    expect(toastDanger).toHaveBeenCalled();
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(bumpAvatarVersion).not.toHaveBeenCalled();
+  });
+
+  it('calls DELETE and updates context on successful removal', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: 'Avatar deleted' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { updateUser, bumpAvatarVersion } = renderSection({ hasAvatar: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить аватар' }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/user/profile/avatar',
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: { Authorization: 'Bearer jwt-token' },
+        }),
+      );
+    });
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith({ hasAvatar: false });
+      expect(bumpAvatarVersion).toHaveBeenCalled();
+    });
+    expect(toastSuccess).toHaveBeenCalledWith(expect.stringMatching(/удалён/i));
+  });
+
+  it('shows an inline error and toast when DELETE fails', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({ message: 'Failed to delete avatar' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { updateUser, bumpAvatarVersion } = renderSection({ hasAvatar: true });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Удалить аватар' }));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Failed to delete avatar');
     });
     expect(toastDanger).toHaveBeenCalled();
     expect(updateUser).not.toHaveBeenCalled();

@@ -153,6 +153,61 @@ describe('User Avatar (e2e)', () => {
     });
   });
 
+  describe('DELETE /user/profile/avatar', () => {
+    it('should delete the avatar: file gone from disk, avatarStoragePath cleared', async () => {
+      await upload(Buffer.from('fake-jpeg-bytes'), 'photo.jpg', 'image/jpeg').expect(201);
+
+      const before = await prisma.user.findUnique({ where: { email: 'avatar@example.com' } });
+      const avatarPath = join(tmpDir, before!.avatarStoragePath!);
+      expect(existsSync(avatarPath)).toBe(true);
+
+      const res = await request(app.getHttpServer())
+        .delete('/user/profile/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body).toEqual({ message: 'Avatar deleted' });
+      expect(existsSync(avatarPath)).toBe(false);
+
+      const after = await prisma.user.findUnique({ where: { email: 'avatar@example.com' } });
+      expect(after!.avatarStoragePath).toBeNull();
+    });
+
+    it('should return 404 for GET avatar after delete', async () => {
+      await upload(Buffer.from('fake-jpeg-bytes'), 'photo.jpg', 'image/jpeg').expect(201);
+
+      await request(app.getHttpServer())
+        .delete('/user/profile/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .get('/user/profile/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
+    });
+
+    it('should tolerate deleting when the avatar file is missing on disk', async () => {
+      await upload(Buffer.from('fake-jpeg-bytes'), 'photo.jpg', 'image/jpeg').expect(201);
+      const user = await prisma.user.findUnique({ where: { email: 'avatar@example.com' } });
+      await prisma.user.update({
+        where: { id: user!.id },
+        data: { avatarStoragePath: `missing/${crypto.randomUUID()}.png` },
+      });
+
+      const res = await request(app.getHttpServer())
+        .delete('/user/profile/avatar')
+        .set('Authorization', `Bearer ${token}`)
+        .expect(200);
+
+      expect(res.body).toEqual({ message: 'Avatar deleted' });
+    });
+
+    it('should return 401 without auth', async () => {
+      await request(app.getHttpServer()).delete('/user/profile/avatar').expect(401);
+    });
+  });
+
   describe('replace', () => {
     it('should delete the old avatar file when replacing', async () => {
       await upload(Buffer.from('first-avatar'), 'first.png', 'image/png').expect(201);

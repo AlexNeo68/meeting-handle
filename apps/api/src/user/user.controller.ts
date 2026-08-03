@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Header,
   HttpCode,
@@ -53,6 +54,12 @@ export class UserController {
   @UseInterceptors(FileInterceptor('file'))
   async uploadAvatar(@UploadedFile() file: Express.Multer.File, @UserId() userId: string) {
     return this.userService.uploadAvatar(userId, file);
+  }
+
+  @Delete('profile/avatar')
+  @HttpCode(HttpStatus.OK)
+  async removeAvatar(@UserId() userId: string) {
+    return this.userService.removeAvatar(userId);
   }
 
   @Get('profile/avatar')
