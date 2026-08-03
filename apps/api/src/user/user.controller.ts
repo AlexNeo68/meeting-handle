@@ -64,6 +64,7 @@ export class UserController {
 
   @Get('profile/avatar')
   @Header('X-Content-Type-Options', 'nosniff')
+  @Header('Cache-Control', 'private, max-age=31536000, immutable')
   async getAvatar(@UserId() userId: string) {
     return this.userService.getAvatar(userId);
   }

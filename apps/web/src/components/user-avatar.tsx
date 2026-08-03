@@ -39,8 +39,7 @@ export default function UserAvatar({ size = 96, className = '', isUploading = fa
 
     async function load() {
       try {
-        const res = await fetch('/api/user/profile/avatar', {
-          cache: 'no-store',
+        const res = await fetch(`/api/user/profile/avatar?v=${avatarVersion}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 

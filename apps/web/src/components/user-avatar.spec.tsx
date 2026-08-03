@@ -76,8 +76,7 @@ describe('UserAvatar', () => {
     const { container } = render(<UserAvatar />);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/user/profile/avatar', {
-        cache: 'no-store',
+      expect(fetchMock).toHaveBeenCalledWith('/api/user/profile/avatar?v=0', {
         headers: { Authorization: 'Bearer jwt-token' },
       });
     });
@@ -110,6 +109,8 @@ describe('UserAvatar', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?v=0');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?v=1');
   });
 
   it('shows a spinner while the avatar is uploading', () => {
