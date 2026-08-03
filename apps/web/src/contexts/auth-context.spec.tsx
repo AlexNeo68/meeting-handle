@@ -248,6 +248,29 @@ describe('AuthContext', () => {
     expect(setItemSpy).toHaveBeenCalledWith('user', JSON.stringify({ ...mockUser, name: 'New Name' }));
   });
 
+  it('two sequential updateUser calls in the same tick do not lose the first update', async () => {
+    localStorage.setItem('token', mockToken);
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => mockUser }),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.user).toEqual(mockUser));
+
+    act(() => {
+      result.current.updateUser({ name: 'First' });
+      result.current.updateUser({ hasAvatar: true });
+    });
+
+    expect(result.current.user).toEqual({ ...mockUser, name: 'First', hasAvatar: true });
+    expect(localStorage.getItem('user')).toBe(
+      JSON.stringify({ ...mockUser, name: 'First', hasAvatar: true }),
+    );
+  });
+
   it('bumpAvatarVersion increments the avatar version counter', () => {
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
 

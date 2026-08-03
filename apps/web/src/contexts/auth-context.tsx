@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 
 export interface User {
   id: string;
@@ -36,6 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [avatarVersion, setAvatarVersion] = useState(0);
+
+  const userRef = useRef<User | null>(null);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   const fetchProfile = useCallback(async (accessToken: string) => {
     const res = await fetch('/api/auth/me', {
@@ -126,12 +132,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = useCallback(
     (partial: Partial<User>) => {
-      if (!user) return;
-      const next = { ...user, ...partial };
+      if (!userRef.current) return;
+      const next = { ...userRef.current, ...partial };
+      userRef.current = next;
       setUser(next);
       localStorage.setItem('user', JSON.stringify(next));
     },
-    [user],
+    [],
   );
 
   const bumpAvatarVersion = useCallback(() => {
