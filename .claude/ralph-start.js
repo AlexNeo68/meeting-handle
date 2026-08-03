@@ -272,6 +272,12 @@ function createPr(phase) {
     log(`   PR уже существует: #${existing.number} — переиспользую.`);
     return true;
   }
+  // Ветку нужно запушить, иначе gh pr create не найдёт head-реф на remote
+  // (GraphQL: Head sha can't be blank / No commits between main and <branch>).
+  if (!run(`git push -u origin "${phase.branch}"`)) {
+    log(`   ⚠️ Не удалось запушить ветку '${phase.branch}' — PR не создан.`);
+    return false;
+  }
   const closedRes = runCapture(
     `gh issue list --milestone "${phase.milestone}" --state closed --json number,title`,
   );
