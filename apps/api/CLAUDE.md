@@ -167,9 +167,11 @@ Controller → Service → Prisma
 
 ### Требование к деплою (trust proxy)
 
-- **trust proxy по умолчанию выключен** (`TRUST_PROXY_HOPS` не задан / равен `0`): `req.ip` — реальный socket-IP клиента, подделка `X-Forwarded-For` не влияет на rate limit.
-- API в production должен быть доступен **только через reverse proxy** (nginx, ALB и т.п.). Если API доступен напрямую, а `TRUST_PROXY_HOPS > 0`, клиент подделывает `X-Forwarded-For` и IP-компонента лимита (`user+IP`) обесценивается (per-user лимит сохраняется).
-- При деплое за прокси задай `TRUST_PROXY_HOPS` = количество прокси-хопов (например, `1` для одного nginx). Не включай `trust proxy` без прокси перед API.
+Полная инструкция — `docs/deployment.md` и образец `apps/api/.env.example`.
+
+- **trust proxy по умолчанию выключен** (`TRUST_PROXY_HOPS` не задан / равен `0`): `req.ip` — реальный socket-IP клиента, подделка `X-Forwarded-For` не влияет на rate limit. Используется при **прямом доступе** к API.
+- API в production должен быть доступен **только через reverse proxy** (Next.js rewrite, nginx, ALB и т.п.). Если API доступен напрямую, а `TRUST_PROXY_HOPS > 0`, клиент подделывает `X-Forwarded-For` и IP-компонента лимита (`user+IP`) обесценивается (per-user лимит сохраняется).
+- **За прокси/rewrite** (в т.ч. единственный доступ через Next.js rewrite `localhost:3001`) задай `TRUST_PROXY_HOPS` = количество прокси-хопов: `1` для одного nginx или одного Next.js rewrite, `N` — для N хопов. Если API за rewrite, а `TRUST_PROXY_HOPS` не задан — все клиенты делят один `req.ip`, IP-компонента лимита схлопывается до per-user (per-user лимит работает). Не включай `trust proxy` без прокси перед API.
 
 ## Правила
 
