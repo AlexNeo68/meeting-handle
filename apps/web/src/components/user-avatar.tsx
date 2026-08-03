@@ -88,6 +88,7 @@ export default function UserAvatar({ size = 96, className = '', isUploading = fa
 
   if (hasAvatar && src) {
     return (
+      // next/image не поддерживает blob: URL, поэтому здесь намеренно <img> (см. apps/web/CLAUDE.md: правила «Изображения»)
       <img
         src={src}
         alt={alt}
