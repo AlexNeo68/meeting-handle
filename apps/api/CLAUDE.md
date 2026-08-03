@@ -28,7 +28,7 @@ npm run build:api # npm run build -w apps/api
 ```
 apps/api/
 ├── prisma/
-│   ├── schema.prisma         # схема БД (User с name/avatarStoragePath, Meeting, MeetingFile)
+│   ├── schema.prisma         # схема БД (User с name/avatarStoragePath/avatarMimeType, Meeting, MeetingFile)
 │   └── migrations/           # миграции Prisma
 ├── src/
 │   ├── main.ts               # точка входа, создание Nest-приложения (trust proxy, CORS, ValidationPipe)

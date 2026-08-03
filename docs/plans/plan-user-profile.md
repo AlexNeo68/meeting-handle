@@ -227,12 +227,12 @@ graph TD
 | JWT email becomes stale after email change | Stale claims in token | Low | Display data comes from AuthContext (hydrated via `/auth/me`), never from token payload; token `sub` unchanged. Documented non-goal (NG2, no email re-verification). |
 | Rate limit (5/15 min) breaks e2e password tests | Flaky tests | Medium | Limit configurable via env (`THROTTLE_TTL`/`THROTTLE_LIMIT`), set high in test env; `@Throttle` override on route. |
 | Existing header.spec mocks `user` without `name`/`hasAvatar` | Header tests break | Medium | `user-avatar` and header fall back safely when fields are absent; update mocks in T6. |
-| Avatar `Content-Type` not stored in schema (PRD has no `avatarMimeType`) | Wrong content-type on GET | Medium | Detect magic bytes with existing `file-type` dependency at serve time; no schema change. Flagged in Open Questions. |
+| Avatar `Content-Type` not stored in schema (PRD has no `avatarMimeType`) | Wrong content-type on GET | Medium | Resolved — `avatarMimeType` stored on `User`; detected once at upload, reused on GET (see Open Questions). |
 
 ## 6. Open Questions
 
 - **S3/облачное хранение аватаров?** — Owner: backend / Status: TBD (эта итерация — локальная ФС, как files). — PRD §15.
-- **Content-Type для GET avatar:** решено — детект magic-bytes через `file-type` на лету (без изменения схемы). Owner: backend / Date: 2026-08-01.
+- **Content-Type для GET avatar:** решено — детект magic-bytes через `file-type` один раз при загрузке, сохраняется в `User.avatarMimeType`; GET отдаёт сохранённый MIME (fallback на детект/`application/octet-stream` для старых записей). Owner: backend / Date: 2026-08-03 (пересмотрено в #48).
 - **`@nestjs/throttler` storage:** решено — in-memory (одна инстанция; DB при горизонтальном масштабировании). Owner: backend / Date: 2026-08-01.
 - **Trim имени:** решено — trim перед валидацией/сохранением; имя из одних пробелов → 400. Owner: backend / Date: 2026-08-01.
 
