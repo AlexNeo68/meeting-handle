@@ -348,6 +348,7 @@ function validateTerms(isSelected: boolean): string | null {
 | `playwright.config.ts` | E2E-конфиг (root): 2 webServer (api :3001, web :3000), `reuseExistingServer` |
 | `apps/web/e2e/file-upload.spec.ts` | Playwright e2e: upload→preview→download→delete + клиентская валидация |
 | `apps/web/src/components/user-avatar.tsx` | Круглый аватар: blob fetch `GET /api/user/profile/avatar` с JWT (keyed на `avatarVersion`) или инициалы (имя → первые буквы, иначе первая буква email), `<img alt={name}>` |
+| `apps/web/src/components/header.tsx` | Блок пользователя в шапке: `user-avatar` (small) + имя/email, клик → `/profile` (`useRouter().push`), `min-h-11` + `aria-label`, кнопка «Выйти» |
 | `apps/web/src/components/profile/avatar-section.tsx` | Загрузка/замена аватара: клиентская валидация `MAX_AVATAR_SIZE`/`ALLOWED_AVATAR_MIME_TYPES` из `@meeting-ai/shared`, инлайн-ошибка, updateUser + bumpAvatarVersion |
 | `apps/web/src/components/profile/general-section.tsx` | Форма «Основное»: имя + email, `PATCH /api/user/profile` → `updateUser()`, 409 → инлайн-ошибка у email, `autoComplete="name"/"email"`, skeleton/disabled+spinner |
 | `apps/web/src/components/profile/password-section.tsx` | Форма «Пароль»: новый + повтор (`new-password`), client-side match check, `PATCH /api/user/password`, инлайн (короткий/несовпадение) + toast (сеть/429) |
@@ -355,7 +356,7 @@ function validateTerms(isSelected: boolean): string | null {
 | `apps/web/src/components/providers.tsx` | ToastProvider (`placement="bottom end"`), AuthProvider |
 | `apps/web/src/contexts/auth-context.tsx` | Auth: login/register, token в localStorage, гидрация `GET /api/auth/me`, `updateUser(partial)`, `avatarVersion` |
 | `apps/web/next.config.js` | Rewrites `/api/*` → `localhost:3001/*` |
-| `apps/web/src/app/globals.css` | Глобальные стили (Tailwind + HeroUI) |
+| `apps/web/src/app/globals.css` | Глобальные стили (Tailwind + HeroUI); override `--muted` (оклч) для контраста muted-текста ≥ 4.5:1 |
 | `apps/web/src/app/layout.tsx` | Root layout |
 
 ---
