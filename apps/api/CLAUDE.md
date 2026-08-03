@@ -31,7 +31,7 @@ apps/api/
 │   ├── schema.prisma         # схема БД (User с name/avatarStoragePath, Meeting, MeetingFile)
 │   └── migrations/           # миграции Prisma
 ├── src/
-│   ├── main.ts               # точка входа, создание Nest-приложения
+│   ├── main.ts               # точка входа, создание Nest-приложения (trust proxy, CORS, ValidationPipe)
 │   ├── app.module.ts         # корневой модуль
 │   ├── prisma/               # PrismaModule (глобальный, @Global())
 │   │   ├── prisma.module.ts
@@ -56,6 +56,8 @@ apps/api/
 │   │   ├── user.module.ts
 │   │   ├── user.controller.ts
 │   │   ├── user.service.ts
+│   │   ├── guards/
+│   │   │   └── change-password-throttler.guard.ts  # rate limit по user+IP для PATCH /user/password
 │   │   ├── commands/
 │   │   │   ├── update-user-profile.command.ts
 │   │   │   └── update-user-profile.handler.ts
@@ -79,6 +81,7 @@ apps/api/
 ├── test/                     # E2E тесты
 │   ├── auth.e2e-spec.ts
 │   ├── meetings.e2e-spec.ts
+│   ├── password.e2e-spec.ts  # смена пароля + rate limit (user+IP)
 │   └── jest-e2e.json
 ├── nest-cli.json
 ├── tsconfig.json
@@ -145,6 +148,16 @@ Controller → Service → Prisma
 ```
 
 Простой CRUD без шины: контроллер вызывает методы сервиса напрямую.
+
+## Rate limiting (смена пароля)
+
+`PATCH /user/password` защищён `@UseGuards(ChangePasswordThrottlerGuard)` — кастомный `ThrottlerGuard`, у которого `getTracker` переопределён на `user.sub + ip` (NFR-13: ≤ 5 попыток / 15 мин per user+IP). Один и тот же IP не блокирует других пользователей, и наоборот. Конфигурация:
+
+| Env | Дефолт | Назначение |
+| --- | ------ | ---------- |
+| `THROTTLE_TTL_MS` | `900000` (15 мин) | Окно rate limit |
+| `THROTTLE_LIMIT` | `5` | Лимит попыток за окно |
+| `TRUST_PROXY_HOPS` | `1` | Хопы reverse proxy (`app.set('trust proxy', ...)`) — чтобы IP был корректным за прокси |
 
 ## Правила
 

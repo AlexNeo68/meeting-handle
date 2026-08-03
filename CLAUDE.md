@@ -56,7 +56,7 @@ meeting-ai/
 │   │       ├── main.ts
 │   │       ├── app.module.ts
 │   │       ├── auth/        # CQRS (register/login)
-│   │       ├── user/        # /user/profile
+│   │       ├── user/        # /user/profile, /user/password (rate limit user+IP), avatar
 │   │       ├── meetings/    # CRUD встреч
 │   │       ├── files/       # загрузка/список/скачивание/просмотр/удаление файлов
 │   │       └── common/      # guards, filters

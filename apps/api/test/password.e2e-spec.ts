@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ThrottlerStorage } from '@nestjs/throttler';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
 describe('Password change (e2e)', () => {
-  let app: INestApplication;
+  let app: NestExpressApplication;
   let prisma: PrismaService;
   let storage: { storage: Map<string, unknown> };
   let token: string;
@@ -17,7 +18,8 @@ describe('Password change (e2e)', () => {
       imports: [AppModule],
     }).compile();
 
-    app = moduleFixture.createNestApplication();
+    app = moduleFixture.createNestApplication<NestExpressApplication>();
+    app.set('trust proxy', 1);
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
     await app.init();
 
@@ -104,6 +106,47 @@ describe('Password change (e2e)', () => {
       const res = await patchPassword('newpassword5').expect(429);
 
       expect(res.body).toBeDefined();
+    });
+
+    it('should not block a different user behind the same IP', async () => {
+      for (let i = 0; i < 5; i++) {
+        await patchPassword(`newpassword${i}`).expect(200);
+      }
+      await patchPassword('newpassword5').expect(429);
+
+      const siblingRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'sibling@example.com', password: 'siblingpass123' });
+
+      await request(app.getHttpServer())
+        .patch('/user/password')
+        .set('Authorization', `Bearer ${siblingRes.body.token}`)
+        .send({ password: 'siblingnewpass123' })
+        .expect(200);
+    });
+
+    it('should not block the same user behind a different IP', async () => {
+      for (let i = 0; i < 5; i++) {
+        await request(app.getHttpServer())
+          .patch('/user/password')
+          .set('Authorization', `Bearer ${token}`)
+          .set('X-Forwarded-For', '10.0.0.1')
+          .send({ password: `newpassword${i}` })
+          .expect(200);
+      }
+      await request(app.getHttpServer())
+        .patch('/user/password')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Forwarded-For', '10.0.0.1')
+        .send({ password: 'newpassword5' })
+        .expect(429);
+
+      await request(app.getHttpServer())
+        .patch('/user/password')
+        .set('Authorization', `Bearer ${token}`)
+        .set('X-Forwarded-For', '10.0.0.2')
+        .send({ password: 'newpassword6' })
+        .expect(200);
     });
   });
 });
