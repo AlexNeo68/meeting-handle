@@ -240,6 +240,16 @@ function workingTreeDirty() {
   return runCapture('git status --porcelain').out.trim().length > 0;
 }
 
+// Прерванная/упавшая сессия может оставить незакоммиченные правки — сбрасываем,
+// чтобы следующая сессия стартовала с чистого коммиченного состояния.
+function ensureCleanTree() {
+  if (DRY) return;
+  if (!workingTreeDirty()) return;
+  log('   🧹 Незакоммиченные правки прерванной сессии — сбрасываю к HEAD.');
+  run('git reset --hard --quiet');
+  run('git clean -fd --quiet');
+}
+
 function ensureBranch(branch, baseRef) {
   if (DRY) {
     log(`   [dry-run] ветка: ${branch} (база: ${baseRef})`);
@@ -421,6 +431,7 @@ async function processPhase(phase, phaseIndex) {
       if (runCapture('git rev-parse HEAD').out.trim() !== headBefore) didWork = true;
     };
 
+    ensureCleanTree();
     const implRes = await runAgentAsync(
       buildImplementPrompt(phase, next.number),
       `impl #${next.number}`,
