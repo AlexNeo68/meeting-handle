@@ -2,6 +2,7 @@ import { ConflictException } from '@nestjs/common';
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterCommand } from './register.command';
 import { UserRegisteredEvent } from '../../user/events/user-registered.event';
@@ -27,13 +28,21 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
 
     const trimmedName = command.name?.trim();
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: command.email,
-        password: hashedPassword,
-        name: trimmedName || null,
-      },
-    });
+    let user;
+    try {
+      user = await this.prisma.user.create({
+        data: {
+          email: command.email,
+          password: hashedPassword,
+          name: trimmedName || null,
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
+        throw new ConflictException('Email already exists');
+      }
+      throw err;
+    }
 
     this.eventBus.publish(new UserRegisteredEvent(user.id, user.email));
 
