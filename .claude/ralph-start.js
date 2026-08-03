@@ -356,7 +356,7 @@ function buildImplementPrompt(phase, number) {
 3. Иначе работай по TDD: сначала напиши/обнови тесты, потом реализацию.
 4. После каждого шага запускай гейт: ${phaseGates(phase).join(' && ')}.
 5. Если менялся UI — прогони UI/UX проверки из CLAUDE.md (контраст ≥4.5:1, интерактивные элементы ≥44×44px, alt/aria-label, keyboard nav, без horizontal scroll, анимации 150–300ms, respects prefers-reduced-motion).
-6. Коммить по conventional commits, в subject обязательно указывай 'closes #${number}'.
+6. Коммить ИНКРЕМЕНТАЛЬНО: после каждого логически завершённого шага делай коммит (даже промежуточный) по conventional commits, в subject обязательно указывай 'closes #${number}'. Сессия может быть оборвана таймаутом — не теряй сделанную работу, фиксируй её коммитами по ходу.
 7. НЕ создавай PR — его создаст ralph-start.js после завершения фазы.
 8. Когда гейт зелёный и критерии готовности выполнены — закрой Issue: gh issue close ${number}.`;
 }
