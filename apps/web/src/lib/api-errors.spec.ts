@@ -3,7 +3,9 @@ import { translateApiError } from './api-errors';
 
 describe('translateApiError', () => {
   it('maps known profile/avatar server messages to Russian', () => {
-    expect(translateApiError('Unsupported avatar type')).toBe('Неподдерживаемый формат изображения.');
+    expect(translateApiError('Unsupported avatar type')).toBe(
+      'Неподдерживаемый формат изображения.',
+    );
     expect(translateApiError('Avatar file is required')).toBe('Не выбран файл изображения.');
     expect(translateApiError('Avatar content does not match allowed image types')).toBe(
       'Содержимое файла не соответствует допустимым типам изображений.',
@@ -35,12 +37,26 @@ describe('translateApiError', () => {
     );
   });
 
+  it('passes through server messages already in Russian', () => {
+    expect(translateApiError('Размер файла превышает лимит 5 МБ')).toBe(
+      'Размер файла превышает лимит 5 МБ',
+    );
+    expect(
+      translateApiError('Размер файла превышает лимит 5 МБ', 'Не удалось загрузить аватар'),
+    ).toBe('Размер файла превышает лимит 5 МБ');
+    expect(translateApiError(['Размер файла превышает лимит 5 МБ'])).toBe(
+      'Размер файла превышает лимит 5 МБ',
+    );
+  });
+
   it('returns generic fallback when the message is missing', () => {
     expect(translateApiError(null)).toBe('Что-то пошло не так. Попробуйте ещё раз.');
     expect(translateApiError(undefined)).toBe('Что-то пошло не так. Попробуйте ещё раз.');
   });
 
   it('maps array messages using the first element', () => {
-    expect(translateApiError(['Email already exists', 'another error'])).toBe('Этот email уже занят');
+    expect(translateApiError(['Email already exists', 'another error'])).toBe(
+      'Этот email уже занят',
+    );
   });
 });
