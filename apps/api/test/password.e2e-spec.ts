@@ -73,6 +73,29 @@ describe('Password change (e2e)', () => {
       await patchPassword('newpassword123', '').expect(401);
     });
 
+    it('should ignore the x-user-id header and act on the authenticated user', async () => {
+      const victimRes = await request(app.getHttpServer())
+        .post('/auth/register')
+        .send({ email: 'victim@example.com', password: 'victimpass123' });
+
+      await request(app.getHttpServer())
+        .patch('/user/password')
+        .set('Authorization', `Bearer ${token}`)
+        .set('x-user-id', victimRes.body.userId)
+        .send({ password: 'attackernewpass123' })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'password@example.com', password: 'attackernewpass123' })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'victim@example.com', password: 'victimpass123' })
+        .expect(200);
+    });
+
     it('should return 429 after exceeding the request limit', async () => {
       for (let i = 0; i < 5; i++) {
         await patchPassword(`newpassword${i}`).expect(200);
