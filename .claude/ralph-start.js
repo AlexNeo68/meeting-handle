@@ -57,6 +57,21 @@ function runCapture(cmd) {
   return { ok: res.status === 0, out: (res.stdout || '').trim(), err: (res.stderr || '').trim() };
 }
 
+function sleepSync(ms) {
+  spawnSync('sleep', [String(Math.max(1, Math.round(ms / 1000)))], { stdio: 'ignore' });
+}
+
+// Транзиентные сетевые сбои GitHub GraphQL (EOF, reset, 5xx) не должны ронять цикл.
+function runCaptureRetry(cmd, attempts = 4, delayMs = 2000) {
+  for (let i = 1; i <= attempts; i++) {
+    const res = runCapture(cmd);
+    if (res.ok) return res;
+    if (i < attempts) log(`   [retry ${i}/${attempts}] ${cmd} → ${res.err || 'failed'}`);
+    if (i < attempts) sleepSync(delayMs);
+  }
+  return runCapture(cmd);
+}
+
 // ---------- agent session (async, timeout + process-group kill) ----------
 // Exit code агента НИКОГДА не прерывает цикл: после сессии всегда идёт гейт.
 
@@ -156,7 +171,7 @@ function runGates(phase) {
 // ---------- GitHub helpers ----------
 
 function openIssues(phase) {
-  const res = runCapture(
+  const res = runCaptureRetry(
     `gh issue list --milestone "${phase.milestone}" --state open --json number,title`,
   );
   if (!res.ok) {
@@ -175,7 +190,7 @@ function openIssues(phase) {
 }
 
 function issueState(number) {
-  const res = runCapture(`gh issue view ${number} --json state`);
+  const res = runCaptureRetry(`gh issue view ${number} --json state`, 3, 1500);
   if (!res.ok) return null;
   try {
     return JSON.parse(res.out).state;
@@ -190,9 +205,14 @@ function closeIssue(number) {
     log('   [noop] gh issue close');
     return true;
   }
-  for (let attempt = 1; attempt <= 2; attempt++) {
-    if (run(`gh issue close ${number}`) && issueState(number) === 'CLOSED') return true;
-    if (attempt < 2) log('   Повторная попытка закрытия...');
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const closed =
+      runCaptureRetry(`gh issue close ${number}`, 2, 1500).ok && issueState(number) === 'CLOSED';
+    if (closed) return true;
+    if (attempt < 3) {
+      log(`   Повторная попытка закрытия (${attempt}/3)...`);
+      sleepSync(1500);
+    }
   }
   log(`⚠️ Не удалось закрыть Issue #${number}.`);
   return false;
@@ -205,7 +225,7 @@ function commentIssue(number, body) {
   }
   const tmp = path.join(ROOT, '.claude', `.ralph-comment-${number}.md`);
   fs.writeFileSync(tmp, body);
-  const ok = run(`gh issue comment ${number} --body-file "${tmp}"`);
+  const ok = runCaptureRetry(`gh issue comment ${number} --body-file "${tmp}"`, 3, 1500).ok;
   fs.unlinkSync(tmp);
   return ok;
 }
@@ -251,7 +271,11 @@ function issueImplementedInBranch(branch, number) {
 // ---------- PR / review ----------
 
 function findOpenPr(branch) {
-  const res = runCapture(`gh pr list --head "${branch}" --state open --json number,url`);
+  const res = runCaptureRetry(
+    `gh pr list --head "${branch}" --state open --json number,url`,
+    3,
+    1500,
+  );
   if (!res.ok) return null;
   try {
     const prs = JSON.parse(res.out);
@@ -336,7 +360,9 @@ function buildFixPrompt(phase, number, failedCmds) {
 }
 
 function buildReviewPrompt(phase) {
-  return `Прочитай .claude/ralph.md. Найди последний открытый PR из ветки '${phase.branch}' (gh pr list --head '${phase.branch}') и проведи детальное code review: архитектура, безопасность, производительность, соответствие PRD (docs/prd/*.md) и критериям готовности issues из milestone '${phase.milestone}'. Оставь комментарии через gh pr review / gh pr comment. Блокирующие замечания указывай чётко; если всё хорошо — напиши об этом в PR.`;
+  return `Прочитай .claude/ralph.md. Найди последний открытый PR из ветки '${phase.branch}' (gh pr list --head '${phase.branch}') и проведи детальное code review: архитектура, безопасность, производительность, соответствие PRD (docs/prd/*.md) и критериям готовности issues из milestone '${phase.milestone}'. Оставь комментарии через gh pr review / gh pr comment. Блокирующие замечания указывай чётко; если всё хорошо — напиши об этом в PR.
+
+ВАЖНО: если 'gh pr review --request-changes' падает с ошибкой «Can not request changes on your own pull request» (PR создан тем же аккаунтом), НЕ бросай задачу — оставь замечания через 'gh pr comment' или 'gh pr review --comment' (комментарий с вердиктом в начале).`;
 }
 
 // ---------- phase ----------
@@ -385,11 +411,22 @@ async function processPhase(phase, phaseIndex) {
       }
     }
 
+    // Закрывать issue можно только если агент реально что-то сделал: появился коммит
+    // (HEAD продвинулся) ИЛИ хотя бы одна сессия завершилась чисто (exit 0). Иначе
+    // упавшая сессия (сеть/SSL) может дать «зелёный гейт» без изменений — не закрываем.
+    const headBefore = runCapture('git rev-parse HEAD').out.trim();
+    let didWork = false;
+    const markWork = (res) => {
+      if (res && res.ok && !res.reason) didWork = true;
+      if (runCapture('git rev-parse HEAD').out.trim() !== headBefore) didWork = true;
+    };
+
     const implRes = await runAgentAsync(
       buildImplementPrompt(phase, next.number),
       `impl #${next.number}`,
     );
     if (implRes.reason === 'budget') return { ok: false, error: 'budget' };
+    markWork(implRes);
 
     let gate = runGates(phase);
     let fixAttempts = 0;
@@ -403,11 +440,23 @@ async function processPhase(phase, phaseIndex) {
         `fix #${next.number} (${fixAttempts})`,
       );
       if (r.reason === 'budget') return { ok: false, error: 'budget' };
+      markWork(r);
       gate = runGates(phase);
     }
 
     if (gate.ok) {
-      if (closeIssue(next.number)) closedCount++;
+      if (didWork) {
+        if (closeIssue(next.number)) closedCount++;
+      } else {
+        failedCount++;
+        log(
+          `⚠️ Issue #${next.number}: гейт зелёный, но агент не внёс изменений (нет коммита, сессии завершились с ошибкой). Issue остаётся открытой.`,
+        );
+        commentIssue(
+          next.number,
+          `Гейт зелёный, но агентская сессия не создала коммитов и завершилась с ошибкой. Изменения не обнаружены — issue остаётся открытой для повторного прогона.`,
+        );
+      }
     } else {
       failedCount++;
       log(`⛔ Issue #${next.number}: гейт не зелёный после ${maxFixAttempts} попыток исправления.`);
