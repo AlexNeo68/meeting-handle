@@ -62,8 +62,8 @@ meeting-ai/
 │   │       └── common/      # guards, filters
 │   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
 │       ├── src/
-│       │   ├── app/         # /, /login, /signup, (authenticated) (создание + список встреч), (authenticated)/meetings/[id]
-│       │   ├── components/  # create-meeting-form, file-upload UI (upload/list/item/preview/icon), providers (Toast)
+│       │   ├── app/         # /, /login, /signup, (authenticated) (создание + список встреч), (authenticated)/meetings/[id], (authenticated)/profile
+│       │   ├── components/  # create-meeting-form, header (user block → /profile), user-avatar, profile (avatar/general/password-section), file-upload UI (upload/list/item/preview/icon), providers (Toast)
 │       │   ├── contexts/    # auth-context (useAuth)
 │       │   └── lib/         # format-date.ts, format-file-size.ts (общие форматтеры)
 │       └── e2e/             # Playwright e2e-тесты (file-upload.spec.ts)
@@ -155,3 +155,8 @@ npm run build -w apps/api   # сборка только api
 
 ## Загрузка файлов на странице встречи
 Используй это исследование - docs/researches/research-file-upload.md
+
+## Назначение директорий
+/docs/prd - директория для хранения PRD для реализации фичей
+/docs/researches - директория для хранения исследований по реализации фичей
+/docs/plans - директория для хранения планов реализации фичей

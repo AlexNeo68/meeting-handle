@@ -7,6 +7,9 @@ export class UpdateUserProfileHandler implements ICommandHandler<UpdateUserProfi
   constructor(private readonly userService: UserService) {}
 
   async execute(command: UpdateUserProfileCommand) {
-    return this.userService.updateProfile(command.userId, { name: command.name });
+    return this.userService.updateProfile(command.userId, {
+      name: command.name,
+      email: command.email,
+    });
   }
 }

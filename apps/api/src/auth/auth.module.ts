@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { PrismaModule } from '../prisma/prisma.module';
 import { AuthController } from './auth.controller';
 import { RegisterHandler } from './commands/register.handler';
+import { GetMeHandler } from './queries/get-me.handler';
 import { LoginHandler } from './queries/login.handler';
 import { JwtStrategy } from './strategies/jwt.strategy';
 
@@ -19,7 +20,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     }),
   ],
   controllers: [AuthController],
-  providers: [RegisterHandler, LoginHandler, JwtStrategy],
+  providers: [RegisterHandler, LoginHandler, GetMeHandler, JwtStrategy],
   exports: [PassportModule, JwtModule],
 })
 export class AuthModule {}
