@@ -118,7 +118,7 @@ export class UserService {
 
       const updated = await this.prisma.user.update({
         where: { id: userId },
-        data: { avatarStoragePath: storagePath },
+        data: { avatarStoragePath: storagePath, avatarMimeType: detected },
         select: PROFILE_SELECT,
       });
 
@@ -149,7 +149,7 @@ export class UserService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { avatarStoragePath: null },
+      data: { avatarStoragePath: null, avatarMimeType: null },
       select: { id: true },
     });
 
@@ -159,7 +159,7 @@ export class UserService {
   async getAvatar(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { avatarStoragePath: true },
+      select: { avatarStoragePath: true, avatarMimeType: true },
     });
 
     if (!user?.avatarStoragePath) {
@@ -178,8 +178,8 @@ export class UserService {
       throw err;
     }
 
-    const detected = await this.detector.detect(absPath);
-    const mimeType = detected ?? 'application/octet-stream';
+    const mimeType =
+      user.avatarMimeType ?? (await this.detector.detect(absPath)) ?? 'application/octet-stream';
 
     return new StreamableFile(createReadStream(absPath), { type: mimeType });
   }

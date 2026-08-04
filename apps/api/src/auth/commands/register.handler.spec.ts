@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConflictException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { EventBus } from '@nestjs/cqrs';
+import { Prisma } from '../../../generated/prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { RegisterCommand } from './register.command';
 import { RegisterHandler } from './register.handler';
@@ -83,6 +84,22 @@ describe('RegisterHandler', () => {
     await expect(handler.execute(command)).rejects.toThrow(ConflictException);
 
     expect(mockPrisma.user.create).not.toHaveBeenCalled();
+    expect(eventBus.publish).not.toHaveBeenCalled();
+  });
+
+  it('should throw ConflictException when create races on a unique email (P2002)', async () => {
+    const command = new RegisterCommand('racing@example.com', 'password123');
+
+    mockPrisma.user.findUnique.mockResolvedValue(null);
+    mockPrisma.user.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed on the fields: (`email`)',
+        { code: 'P2002', clientVersion: '7.9.0', meta: { target: ['email'] } },
+      ),
+    );
+
+    await expect(handler.execute(command)).rejects.toThrow(ConflictException);
+
     expect(eventBus.publish).not.toHaveBeenCalled();
   });
 

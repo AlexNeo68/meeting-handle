@@ -1,4 +1,4 @@
-import { BadRequestException, HttpStatus, PayloadTooLargeException } from '@nestjs/common';
+import { BadRequestException, HttpStatus, Logger, PayloadTooLargeException } from '@nestjs/common';
 import { MAX_AVATAR_SIZE } from '@meeting-ai/shared';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
@@ -65,6 +65,26 @@ describe('AllExceptionsFilter', () => {
       statusCode: 400,
       message: 'Unsupported avatar type',
       error: 'Bad Request',
+    });
+  });
+
+  it('should log unhandled errors with a stack trace via Logger.error', () => {
+    const host = mockHost('/some/path');
+    const error = new Error('boom');
+    const loggerSpy = jest.spyOn(Logger, 'error').mockImplementation(() => undefined);
+
+    filter.catch(error, {
+      switchToHttp: () => host,
+    } as Parameters<typeof filter.catch>[1]);
+
+    expect(loggerSpy).toHaveBeenCalledWith(error.message, error.stack, 'AllExceptionsFilter');
+
+    const { status, json } = host.getResponse();
+    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(json).toHaveBeenCalledWith({
+      statusCode: 500,
+      message: 'Internal server error',
+      error: 'Internal Server Error',
     });
   });
 });

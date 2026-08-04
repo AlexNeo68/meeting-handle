@@ -24,11 +24,12 @@ function getInitials(name: string | null, email: string): string {
 export default function UserAvatar({ size = 96, className = '', isUploading = false }: UserAvatarProps) {
   const { user, token, avatarVersion } = useAuth();
   const hasAvatar = user?.hasAvatar ?? false;
+  const userId = user?.id ?? '';
   const [src, setSrc] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!hasAvatar || !token) {
+    if (!hasAvatar || !token || !userId) {
       setSrc(null);
       setError(null);
       return;
@@ -39,7 +40,7 @@ export default function UserAvatar({ size = 96, className = '', isUploading = fa
 
     async function load() {
       try {
-        const res = await fetch(`/api/user/profile/avatar?v=${avatarVersion}`, {
+        const res = await fetch(`/api/user/profile/avatar?u=${userId}&v=${avatarVersion}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -68,7 +69,7 @@ export default function UserAvatar({ size = 96, className = '', isUploading = fa
         URL.revokeObjectURL(objectUrl);
       }
     };
-  }, [hasAvatar, token, avatarVersion]);
+  }, [hasAvatar, token, avatarVersion, userId]);
 
   const alt = user?.name ?? user?.email ?? 'Аватар';
 
@@ -87,6 +88,7 @@ export default function UserAvatar({ size = 96, className = '', isUploading = fa
 
   if (hasAvatar && src) {
     return (
+      // next/image не поддерживает blob: URL, поэтому здесь намеренно <img> (см. apps/web/CLAUDE.md: правила «Изображения»)
       <img
         src={src}
         alt={alt}

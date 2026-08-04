@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { MAX_AVATAR_SIZE, MAX_FILE_SIZE } from '@meeting-ai/shared';
 import { Request, Response } from 'express';
 
@@ -52,6 +52,12 @@ export class AllExceptionsFilter implements ExceptionFilter {
         : status === 404
           ? 'Not Found'
           : 'Internal Server Error';
+
+    Logger.error(
+      exception instanceof Error ? exception.message : String(exception),
+      exception instanceof Error ? exception.stack : undefined,
+      AllExceptionsFilter.name,
+    );
 
     response.status(status).json({
       statusCode: status,

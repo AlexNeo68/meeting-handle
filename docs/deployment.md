@@ -61,3 +61,30 @@ npm run build:api && npx prisma migrate deploy -w apps/api
 tracker). Лимит не должен срабатывать для разных пользователей за одним IP
 и для одного пользователя за разными IP — это покрыто e2e-тестами
 (`apps/api/test/password.e2e-spec.ts`, оба режима trust proxy).
+
+### Storage: in-memory (ограничение при горизонтальном масштабировании)
+
+`ThrottlerModule.forRoot` (`apps/api/src/app.module.ts`) использует **storage по
+умолчанию — in-memory `Map`** в процессе приложения. Это корректно для **одного
+инстанса API**, но при **горизонтальном масштабировании** (несколько реплик
+API за балансировщиком) счётчики лимитов не общие:
+
+| Инстансы | Что происходит |
+| -------- | -------------- |
+| 1 | Лимит `THROTTLE_LIMIT` за `THROTTLE_TTL_MS` — глобальный, строгий. |
+| N > 1 | Каждый инстанс ведёт **свой** счётчик: эффективный лимит ≈ `N × THROTTLE_LIMIT`, окно стартует отдельно на каждом инстансе, ретраи одного и того же запроса могут попасть на разные реплики. |
+
+**План перехода на shared storage** (когда понадобится горизонтальное
+масштабирование):
+
+1. Подключить shared backend (например Redis) и имплементацию
+   `ThrottlerStorage` для него (сообщество `@nestjs/throttler` — пакеты вида
+   `@nest-lab/throttler-storage-redis` или собственная реализация интерфейса
+   `ThrottlerStorage`: `increment(key, ttl, limit, blockDuration, throttlerName)`).
+2. Передать storage в `ThrottlerModule.forRoot` через опцию `storage` —
+   guard/tracker и поведение лимитов не меняются, меняется только бэкенд
+   счётчиков.
+3. Настроить env: `THROTTLE_STORAGE=memory|redis`, `REDIS_URL`.
+4. Обновить этот раздел и таблицу env в `apps/api/.env.example`.
+
+До горизонтального масштабирования менять storage **не требуется**.

@@ -28,7 +28,7 @@ npm run build:api # npm run build -w apps/api
 ```
 apps/api/
 ├── prisma/
-│   ├── schema.prisma         # схема БД (User с name/avatarStoragePath, Meeting, MeetingFile)
+│   ├── schema.prisma         # схема БД (User с name/avatarStoragePath/avatarMimeType, Meeting, MeetingFile)
 │   └── migrations/           # миграции Prisma
 ├── src/
 │   ├── main.ts               # точка входа, создание Nest-приложения (trust proxy, CORS, ValidationPipe)
@@ -164,6 +164,8 @@ Controller → Service → Prisma
 | `THROTTLE_TTL_MS` | `900000` (15 мин) | Окно rate limit |
 | `THROTTLE_LIMIT` | `5` | Лимит попыток за окно |
 | `TRUST_PROXY_HOPS` | `0` (trust proxy выключен) | Хопы reverse proxy (`app.set('trust proxy', ...)`). Выставляется **явно** в prod, если API стоит за прокси |
+
+`ThrottlerModule.forRoot` в `app.module.ts` использует **in-memory storage** (`Map` в процессе) — корректно для одного инстанса, но при горизонтальном масштабировании счётчики не общие (эффективный лимит ≈ N × limit). Ограничение и план перехода на shared storage (Redis) — `docs/deployment.md` → «Rate limit».
 
 ### Требование к деплою (trust proxy)
 

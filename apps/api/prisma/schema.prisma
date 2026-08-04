@@ -13,6 +13,7 @@ model User {
   password          String
   name              String?
   avatarStoragePath String?
+  avatarMimeType    String?
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   meetings          Meeting[]
