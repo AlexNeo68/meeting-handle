@@ -175,6 +175,19 @@ Controller → Service → Prisma
 - API в production должен быть доступен **только через reverse proxy** (Next.js rewrite, nginx, ALB и т.п.). Если API доступен напрямую, а `TRUST_PROXY_HOPS > 0`, клиент подделывает `X-Forwarded-For` и IP-компонента лимита (`user+IP`) обесценивается (per-user лимит сохраняется).
 - **За прокси/rewrite** (в т.ч. единственный доступ через Next.js rewrite `localhost:3001`) задай `TRUST_PROXY_HOPS` = количество прокси-хопов: `1` для одного nginx или одного Next.js rewrite, `N` — для N хопов. Если API за rewrite, а `TRUST_PROXY_HOPS` не задан — все клиенты делят один `req.ip`, IP-компонента лимита схлопывается до per-user (per-user лимит работает). Не включай `trust proxy` без прокси перед API.
 
+## Кэширование аватаров
+
+`GET /user/profile/avatar` отдаёт `Cache-Control: private, no-store` +
+`X-Content-Type-Options: nosniff` (`user.controller.ts`). `no-store` — осознанный
+выбор: аватар приватный, URL без user-scoped ключа (пользователь — только в
+`Authorization: Bearer`), утечка между пользователями исключается. Трейдофф:
+каждый рендер аватара (шапка на каждой странице, профиль) ходит в сеть.
+
+Путь к кэшированию без утечки — `private, max-age=31536000, immutable` +
+user-scoped ключ (включая идентификатор пользователя в URL или `?v=version`)
++ `Vary: Authorization` + `ETag`/`304` — и полное обоснование трейдоффа:
+`docs/deployment.md` → «Кэширование аватаров».
+
 ## Правила
 
 - Модульная архитектура NestJS (feature modules, не перегружать `app.module.ts`).
