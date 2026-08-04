@@ -165,6 +165,8 @@ Controller → Service → Prisma
 | `THROTTLE_LIMIT` | `5` | Лимит попыток за окно |
 | `TRUST_PROXY_HOPS` | `0` (trust proxy выключен) | Хопы reverse proxy (`app.set('trust proxy', ...)`). Выставляется **явно** в prod, если API стоит за прокси |
 
+`ThrottlerModule.forRoot` в `app.module.ts` использует **in-memory storage** (`Map` в процессе) — корректно для одного инстанса, но при горизонтальном масштабировании счётчики не общие (эффективный лимит ≈ N × limit). Ограничение и план перехода на shared storage (Redis) — `docs/deployment.md` → «Rate limit».
+
 ### Требование к деплою (trust proxy)
 
 Полная инструкция — `docs/deployment.md` и образец `apps/api/.env.example`.
