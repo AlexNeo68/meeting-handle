@@ -7,8 +7,8 @@
   "gates": ["npm run lint"],
   "phases": [
     {
-      "milestone": "P6 (Cache & hardening)",
-      "branch": "feat/cache-hardening",
+      "milestone": "P7 (Cache polish & e2e)",
+      "branch": "feat/cache-polish",
       "tests": ["npm run test:web", "npm run test:api"],
       "gates": ["npm run lint"]
     }

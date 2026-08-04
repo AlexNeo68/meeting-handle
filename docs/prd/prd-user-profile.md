@@ -151,6 +151,7 @@ model User {
   password          String
   name              String?        // отображаемое имя
   avatarStoragePath String?        // относительный путь: {userId}/avatar/{uuid}-{sanitized}
+  avatarMimeType    String?        // внутреннее поле: MIME-тип аватара (не в API-контрактах)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   meetings          Meeting[]
@@ -161,6 +162,7 @@ model User {
 Изменения:
 - Добавить `name String?`
 - Добавить `avatarStoragePath String?` (локальное хранение, аналог `storagePath` у `MeetingFile`)
+- Добавить `avatarMimeType String?` — **внутреннее (internal) поле**: MIME-тип аватара, детектится один раз при загрузке (magic-bytes через `file-type`) и переиспользуется на `GET /user/profile/avatar` (fallback — повторный детект/`application/octet-stream` для старых записей). В API-контрактах (§10) и в ответах профиля (`toProfile`) **не светится** — клиенту не возвращается.
 
 Миграция:
 - `npx prisma migrate dev --name add_user_name_and_avatar`

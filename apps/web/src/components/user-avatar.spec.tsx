@@ -31,6 +31,7 @@ function stubObjectURL() {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  mockUseAuth.mockReset();
   vi.restoreAllMocks();
 });
 
@@ -76,7 +77,7 @@ describe('UserAvatar', () => {
     const { container } = render(<UserAvatar />);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/user/profile/avatar?u=user-1&v=0', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/user/profile/avatar?v=0', {
         headers: { Authorization: 'Bearer jwt-token' },
       });
     });
@@ -94,9 +95,13 @@ describe('UserAvatar', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
-    const { rerender } = render(
-      <UserAvatar />
-    );
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1', email: 'ivan@example.com', name: 'Иван Петров', hasAvatar: true },
+      token: 'jwt-token',
+      avatarVersion: 0,
+    });
+
+    const { rerender } = render(<UserAvatar />);
 
     mockUseAuth.mockReturnValue({
       user: { id: 'user-1', email: 'ivan@example.com', name: 'Иван Петров', hasAvatar: true },
@@ -109,11 +114,11 @@ describe('UserAvatar', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?u=user-1&v=0');
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?u=user-1&v=1');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?v=0');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?v=1');
   });
 
-  it('uses a user-scoped cache key so switching accounts never reuses the previous account URL', async () => {
+  it('re-fetches with a fresh token when switching accounts, without a user id in the URL', async () => {
     stubObjectURL();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -121,11 +126,17 @@ describe('UserAvatar', () => {
     });
     vi.stubGlobal('fetch', fetchMock);
 
+    mockUseAuth.mockReturnValue({
+      user: { id: 'user-1', email: 'ivan@example.com', name: 'Иван Петров', hasAvatar: true },
+      token: 'old-token',
+      avatarVersion: 1,
+    });
+
     const { rerender } = render(<UserAvatar />);
 
     mockUseAuth.mockReturnValue({
       user: { id: 'user-2', email: 'petr@example.com', name: 'Пётр Иванов', hasAvatar: true },
-      token: 'jwt-token',
+      token: 'new-token',
       avatarVersion: 1,
     });
 
@@ -134,8 +145,12 @@ describe('UserAvatar', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?u=user-1&v=1');
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?u=user-2&v=1');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?v=1');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?v=1');
+    expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer new-token');
+    for (const [url] of fetchMock.mock.calls) {
+      expect(String(url)).not.toContain('u=');
+    }
   });
 
   it('shows a spinner while the avatar is uploading', () => {
