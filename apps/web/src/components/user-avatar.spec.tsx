@@ -76,7 +76,7 @@ describe('UserAvatar', () => {
     const { container } = render(<UserAvatar />);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith('/api/user/profile/avatar?u=user-1&v=0', {
+      expect(fetchMock).toHaveBeenCalledWith('/api/user/profile/avatar?v=0', {
         headers: { Authorization: 'Bearer jwt-token' },
       });
     });
@@ -109,11 +109,11 @@ describe('UserAvatar', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?u=user-1&v=0');
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?u=user-1&v=1');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?v=0');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?v=1');
   });
 
-  it('uses a user-scoped cache key so switching accounts never reuses the previous account URL', async () => {
+  it('re-fetches with a fresh token when switching accounts, without a user id in the URL', async () => {
     stubObjectURL();
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
@@ -134,8 +134,11 @@ describe('UserAvatar', () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
     });
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?u=user-1&v=1');
-    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?u=user-2&v=1');
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/user/profile/avatar?v=1');
+    expect(fetchMock.mock.calls[1][0]).toBe('/api/user/profile/avatar?v=1');
+    for (const [url] of fetchMock.mock.calls) {
+      expect(String(url)).not.toContain('u=');
+    }
   });
 
   it('shows a spinner while the avatar is uploading', () => {
