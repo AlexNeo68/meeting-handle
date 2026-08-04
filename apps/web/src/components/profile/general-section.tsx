@@ -12,6 +12,7 @@ import {
 } from '@heroui/react';
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { translateApiError } from '@/lib/api-errors';
 
 const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
@@ -61,10 +62,10 @@ export default function GeneralSection() {
 
         if (!res.ok) {
           if (res.status === 409) {
-            setEmailError(data?.message ?? 'Этот email уже занят');
+            setEmailError(translateApiError(data?.message, 'Этот email уже занят'));
             return;
           }
-          setFormError(data?.message ?? 'Не удалось сохранить профиль');
+          setFormError(translateApiError(data?.message, 'Не удалось сохранить профиль'));
           return;
         }
 

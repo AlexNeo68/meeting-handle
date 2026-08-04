@@ -139,7 +139,7 @@ describe('AvatarSection', () => {
     selectFile(makeFile('avatar.png', 'image/png'));
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Unsupported avatar type');
+      expect(screen.getByRole('alert')).toHaveTextContent('Неподдерживаемый формат изображения.');
     });
     expect(toastDanger).toHaveBeenCalled();
     expect(updateUser).not.toHaveBeenCalled();
@@ -187,7 +187,7 @@ describe('AvatarSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Удалить аватар' }));
 
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('Failed to delete avatar');
+      expect(screen.getByRole('alert')).toHaveTextContent('Не удалось удалить аватар');
     });
     expect(toastDanger).toHaveBeenCalled();
     expect(updateUser).not.toHaveBeenCalled();

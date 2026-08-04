@@ -144,8 +144,10 @@ describe('PasswordSection', () => {
     await user.type(screen.getByLabelText(/повторите пароль/i), 'newpass123');
     await user.click(screen.getByRole('button', { name: /сменить пароль/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Too Many Requests');
-    expect(toastDanger).toHaveBeenCalledWith('Too Many Requests');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Слишком много попыток. Попробуйте позже.',
+    );
+    expect(toastDanger).toHaveBeenCalledWith('Слишком много попыток. Попробуйте позже.');
   });
 
   it('shows a toast on a network failure', async () => {

@@ -106,7 +106,7 @@ describe('GeneralSection', () => {
     await user.click(screen.getByRole('button', { name: /сохранить/i }));
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Email already exists');
+    expect(alert).toHaveTextContent('Этот email уже занят');
     expect(updateUser).not.toHaveBeenCalled();
     expect(toastSuccess).not.toHaveBeenCalled();
   });

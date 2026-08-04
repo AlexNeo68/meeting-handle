@@ -99,6 +99,18 @@ describe('User Avatar (e2e)', () => {
       await upload(Buffer.from('MZ...'), 'malware.exe', 'application/x-msdownload').expect(400);
     });
 
+    it('should return 400 when a spoofed image Content-Type wraps non-image content', async () => {
+      detectorMock.detect.mockResolvedValue('application/pdf');
+
+      await upload(Buffer.from('%PDF-1.4 not-an-image'), 'photo.png', 'image/png').expect(400);
+    });
+
+    it('should return 400 when the real content type cannot be detected', async () => {
+      detectorMock.detect.mockResolvedValue(null);
+
+      await upload(Buffer.from('not-an-image'), 'photo.png', 'image/png').expect(400);
+    });
+
     it('should return 400 when no file is provided', async () => {
       await request(app.getHttpServer())
         .post('/user/profile/avatar')
@@ -125,6 +137,7 @@ describe('User Avatar (e2e)', () => {
 
       expect(res.headers['content-type']).toContain('image/jpeg');
       expect(res.headers['x-content-type-options']).toBe('nosniff');
+      expect(res.headers['cache-control']).toBe('private, max-age=31536000, immutable');
       expect((res.body as Buffer).toString('utf8')).toBe('fake-jpeg-bytes');
     });
 

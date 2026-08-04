@@ -1,5 +1,6 @@
 import { NotFoundException } from '@nestjs/common';
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
+import { toProfile } from '../../common/utils/profile-mapper.util';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GetMeQuery } from './get-me.query';
 
@@ -17,11 +18,6 @@ export class GetMeHandler implements IQueryHandler<GetMeQuery> {
       throw new NotFoundException(`User with id "${query.userId}" not found`);
     }
 
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      hasAvatar: user.avatarStoragePath !== null,
-    };
+    return toProfile(user);
   }
 }

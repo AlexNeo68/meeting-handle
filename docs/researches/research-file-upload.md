@@ -299,7 +299,7 @@ Sources:
 - Override `MULTER_MODULE_OPTIONS` (token `'MULTER_MODULE_OPTIONS'`, verified in `files.constants.js`) with a tiny `diskStorage` in a `mkdtempSync` dir + small `fileSize` limit → no real upload dir, no 100 MB files in tests.
 - Cleanup: `afterAll` → `app.close()` + `rmSync(tmpDir, { recursive: true, force: true })` + `prisma.meetingFile.deleteMany()`.
 - **Adjust plan expectations:** oversize → **413** (not 400, D1). Bad MIME → 400 (from `fileFilter`/magic bytes). Ownership violations on meeting/file → **404** (consistent with existing `meetings.e2e-spec.ts`, not 403 — the plan's PRD §12 mentions 403, but the repo convention and plan §2 both use 404).
-- Auth: reuse the JWT flow from `auth.e2e-spec.ts`; `@UserId()` honors the `x-user-id` header fallback (verified) — handy for negative authz tests.
+- Auth: reuse the JWT flow from `auth.e2e-spec.ts`; `@UserId()` resolves the user only from `request.user.sub` (the `x-user-id` header is ignored since the S1 account-takeover fix, see `password.e2e-spec.ts`).
 
 ```ts
 const tmpDir = mkdtempSync(join(tmpdir(), 'uploads-'));

@@ -55,11 +55,12 @@ describe('AuthContext', () => {
     expect(localStorage.getItem('user')).toBe(JSON.stringify(mockUser));
   });
 
-  it('clears the session when hydration profile fetch fails', async () => {
+  it.each([401, 403])('clears the session when hydration profile fetch fails with %s', async (status) => {
     localStorage.setItem('token', mockToken);
+    localStorage.setItem('user', JSON.stringify(mockUser));
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: false, json: async () => ({ message: 'Unauthorized' }) }),
+      vi.fn().mockResolvedValue({ ok: false, status, json: async () => ({ message: 'Unauthorized' }) }),
     );
 
     const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
@@ -70,6 +71,43 @@ describe('AuthContext', () => {
     expect(result.current.user).toBeNull();
     expect(localStorage.getItem('token')).toBeNull();
     expect(localStorage.getItem('user')).toBeNull();
+  });
+
+  it.each([500, 503])('keeps the session on hydration 5xx (%s) using the localStorage copy', async (status) => {
+    localStorage.setItem('token', mockToken);
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: false, status, json: async () => ({ message: 'Server error' }) }),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.token).toBe(mockToken);
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(localStorage.getItem('token')).toBe(mockToken);
+    expect(localStorage.getItem('user')).toBe(JSON.stringify(mockUser));
+  });
+
+  it('keeps the session on network error using the localStorage copy', async () => {
+    localStorage.setItem('token', mockToken);
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+
+    const { result } = renderHook(() => useAuth(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.user).toEqual(mockUser);
+      expect(result.current.token).toBe(mockToken);
+    });
+
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(localStorage.getItem('token')).toBe(mockToken);
+    expect(localStorage.getItem('user')).toBe(JSON.stringify(mockUser));
   });
 
   it('login calls POST /api/auth/login then GET /api/auth/me and stores token', async () => {

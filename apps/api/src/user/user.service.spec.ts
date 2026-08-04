@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable } from 'node:stream';
 import * as bcrypt from 'bcrypt';
+import { Prisma } from '../../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../files/files.constants';
 import { UserService } from './user.service';
@@ -51,6 +52,7 @@ describe('UserService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockDetector.detect.mockResolvedValue('image/png');
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -197,6 +199,23 @@ describe('UserService', () => {
         NotFoundException,
       );
     });
+
+    it('should throw ConflictException when update races on a unique email (P2002)', async () => {
+      mockPrisma.user.findUnique
+        .mockResolvedValueOnce({ id: 'uuid-123', email: 'user@example.com' })
+        .mockResolvedValueOnce(null);
+      mockPrisma.user.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`email`)',
+          { code: 'P2002', clientVersion: '7.9.0', meta: { target: ['email'] } },
+        ),
+      );
+
+      await expect(service.updateProfile('uuid-123', { email: 'new@example.com' })).rejects.toThrow(
+        ConflictException,
+      );
+      expect(mockPrisma.user.update).toHaveBeenCalled();
+    });
   });
 
   describe('uploadAvatar', () => {
@@ -274,6 +293,93 @@ describe('UserService', () => {
       const result = await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
 
       expect(mockPrisma.user.update).toHaveBeenCalled();
+      expect(result.hasAvatar).toBe(true);
+    });
+
+    it('should update the DB before unlinking the old avatar', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: 'uuid-123/avatar/old.png',
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: 'uuid-123/avatar/avatar.png',
+      });
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
+
+      const updateOrder = (mockPrisma.user.update as jest.Mock).mock.invocationCallOrder[0];
+      const unlinkOrder = (unlink as jest.Mock).mock.invocationCallOrder[0];
+      expect(updateOrder).toBeLessThan(unlinkOrder);
+    });
+
+    it('should not unlink the old avatar when the DB update fails', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: 'uuid-123/avatar/old.png',
+      });
+      mockPrisma.user.update.mockRejectedValue(new Error('database unreachable'));
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await expect(
+        service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png')),
+      ).rejects.toThrow('database unreachable');
+
+      expect(mockPrisma.user.update).toHaveBeenCalled();
+      expect(unlink).not.toHaveBeenCalledWith(join(uploadDir, 'uuid-123/avatar/old.png'));
+    });
+
+    it('should reject a spoofed Content-Type when the real content is not an allowed image', async () => {
+      mockDetector.detect.mockResolvedValue('application/pdf');
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await expect(
+        service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png')),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(mockDetector.detect).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
+      expect(unlink).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
+      expect(mockPrisma.user.findUnique).not.toHaveBeenCalled();
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should reject an avatar whose content type cannot be detected', async () => {
+      mockDetector.detect.mockResolvedValue(null);
+      (unlink as jest.Mock).mockResolvedValue(undefined);
+
+      await expect(
+        service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png')),
+      ).rejects.toThrow(BadRequestException);
+
+      expect(unlink).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
+      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+    });
+
+    it('should accept when the detected content type is an allowed image type', async () => {
+      mockDetector.detect.mockResolvedValue('image/png');
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: null,
+      });
+      mockPrisma.user.update.mockResolvedValue({
+        id: 'uuid-123',
+        email: 'user@example.com',
+        name: 'Alice',
+        avatarStoragePath: 'uuid-123/avatar/avatar.png',
+      });
+
+      const result = await service.uploadAvatar('uuid-123', file('/uploads/uuid-123/avatar/avatar.png'));
+
+      expect(mockDetector.detect).toHaveBeenCalledWith('/uploads/uuid-123/avatar/avatar.png');
       expect(result.hasAvatar).toBe(true);
     });
   });

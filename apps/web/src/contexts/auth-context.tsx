@@ -20,6 +20,16 @@ interface AuthContextValue {
   bumpAvatarVersion: () => void;
 }
 
+class ProfileFetchError extends Error {
+  status: number;
+
+  constructor(status: number) {
+    super('Не удалось загрузить профиль');
+    this.name = 'ProfileFetchError';
+    this.status = status;
+  }
+}
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -33,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     if (!res.ok) {
-      throw new Error('Не удалось загрузить профиль');
+      throw new ProfileFetchError(res.status);
     }
 
     return (await res.json()) as User;
@@ -48,6 +58,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     setToken(storedToken);
 
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        localStorage.removeItem('user');
+      }
+    }
+
     let cancelled = false;
 
     fetchProfile(storedToken)
@@ -56,12 +75,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(profile);
         localStorage.setItem('user', JSON.stringify(profile));
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return;
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setToken(null);
-        setUser(null);
+
+        // Clear the session only on auth errors (401/403). Transient failures
+        // (network, 5xx) must keep the user logged in with the storage copy.
+        if (error instanceof ProfileFetchError && (error.status === 401 || error.status === 403)) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setToken(null);
+          setUser(null);
+        }
       });
 
     return () => {

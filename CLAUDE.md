@@ -56,16 +56,16 @@ meeting-ai/
 │   │       ├── main.ts
 │   │       ├── app.module.ts
 │   │       ├── auth/        # CQRS (register/login)
-│   │       ├── user/        # /user/profile
+│   │       ├── user/        # /user/profile, /user/password (rate limit user+IP), avatar
 │   │       ├── meetings/    # CRUD встреч
 │   │       ├── files/       # загрузка/список/скачивание/просмотр/удаление файлов
-│   │       └── common/      # guards, filters
+│   │       └── common/      # decorators, filters, utils (в т.ч. единый маппинг профиля toProfile)
 │   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
 │       ├── src/
 │       │   ├── app/         # /, /login, /signup, (authenticated) (создание + список встреч), (authenticated)/meetings/[id], (authenticated)/profile
 │       │   ├── components/  # create-meeting-form, header (user block → /profile), user-avatar, profile (avatar/general/password-section), file-upload UI (upload/list/item/preview/icon), providers (Toast)
 │       │   ├── contexts/    # auth-context (useAuth)
-│       │   └── lib/         # format-date.ts, format-file-size.ts (общие форматтеры)
+│       │       └── lib/         # api-errors.ts (перевод ошибок API на русский), format-date.ts, format-file-size.ts (общие форматтеры)
 │       └── e2e/             # Playwright e2e-тесты (file-upload.spec.ts)
 ├── packages/
 │   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы), getFileKind

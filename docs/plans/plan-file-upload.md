@@ -258,7 +258,7 @@ Files module follows the **Service pattern** (not CQRS), matching the Meetings m
 
 ### Prior art
 - Meeting controller/service pattern: `apps/api/src/meetings/` — controller with class-level `@UseGuards(JwtAuthGuard)`, service with `PrismaService` injection
-- E2E test setup: `apps/api/test/meetings.e2e-spec.ts` — `TestingModule` with `AppModule`, uses `x-user-id` header for auth override
+- E2E test setup: `apps/api/test/meetings.e2e-spec.ts` — `TestingModule` with `AppModule`, auth via real JWT (the `x-user-id` header override was removed in the S1 account-takeover fix)
 - Frontend component tests: `apps/web/src/app/(authenticated)/page.spec.tsx` — `vi.mock` for auth context, `vi.stubGlobal('fetch')` for API
 - HeroUI patterns: compound components (`Card.Content`), `onPress` over `onClick`, `className="w-full"` on Input
 
