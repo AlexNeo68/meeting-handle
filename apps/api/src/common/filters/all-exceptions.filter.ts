@@ -1,5 +1,14 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from '@nestjs/common';
-import { Response } from 'express';
+import { MAX_AVATAR_SIZE, MAX_FILE_SIZE } from '@meeting-ai/shared';
+import { Request, Response } from 'express';
+
+const FILE_SIZE_LIMIT_MESSAGE = `File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)} MB limit`;
+const AVATAR_SIZE_LIMIT_MESSAGE = `Размер файла превышает лимит ${MAX_AVATAR_SIZE / (1024 * 1024)} МБ`;
+
+function isAvatarUpload(request: Request): boolean {
+  const path = request.route?.path ?? request.originalUrl ?? '';
+  return path.startsWith('/user/profile/avatar');
+}
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -8,9 +17,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       if (exception.getStatus() === HttpStatus.PAYLOAD_TOO_LARGE) {
+        const request = host.switchToHttp().getRequest<Request>();
         response.status(HttpStatus.BAD_REQUEST).json({
           statusCode: 400,
-          message: 'File size exceeds 100 MB limit',
+          message: isAvatarUpload(request) ? AVATAR_SIZE_LIMIT_MESSAGE : FILE_SIZE_LIMIT_MESSAGE,
           error: 'Bad Request',
         });
         return;

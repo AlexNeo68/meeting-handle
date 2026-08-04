@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { renderHook, act, waitFor } from '@testing-library/react';
 
-import { ReactNode } from 'react';
+import { ReactNode, StrictMode } from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AuthProvider, useAuth } from './auth-context';
 
@@ -215,6 +215,37 @@ describe('AuthContext', () => {
     expect(localStorage.getItem('user')).toBe(
       JSON.stringify({ ...mockUser, name: 'New Name', hasAvatar: true }),
     );
+  });
+
+  it('updateUser writes to localStorage once per call, not inside the setUser updater (StrictMode)', async () => {
+    localStorage.setItem('token', mockToken);
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => mockUser }),
+    );
+
+    const setItemSpy = vi.spyOn(localStorage, 'setItem');
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: ({ children }) => (
+        <StrictMode>
+          <AuthProvider>{children}</AuthProvider>
+        </StrictMode>
+      ),
+    });
+
+    await waitFor(() => expect(result.current.user).toEqual(mockUser));
+
+    setItemSpy.mockClear();
+
+    act(() => {
+      result.current.updateUser({ name: 'New Name' });
+    });
+
+    expect(result.current.user).toEqual({ ...mockUser, name: 'New Name' });
+    expect(setItemSpy).toHaveBeenCalledTimes(1);
+    expect(setItemSpy).toHaveBeenCalledWith('user', JSON.stringify({ ...mockUser, name: 'New Name' }));
   });
 
   it('bumpAvatarVersion increments the avatar version counter', () => {

@@ -56,6 +56,26 @@ describe('GeneralSection', () => {
     expect(screen.getByRole('button', { name: /сохранить/i })).toBeInTheDocument();
   });
 
+  it('re-syncs the fields with the context after profile hydration', async () => {
+    const { rerender } = renderSection();
+
+    expect(screen.getByLabelText(/имя/i)).toHaveValue('Иван Петров');
+    expect(screen.getByLabelText(/email/i)).toHaveValue('ivan@example.com');
+
+    const hydratedUser = { ...mockUser, name: 'Иван Обновлённый', email: 'new@example.com' };
+    mockUseAuth.mockReturnValue({
+      user: hydratedUser,
+      token: 'jwt-token',
+      updateUser: vi.fn(),
+    });
+    rerender(<GeneralSection />);
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/имя/i)).toHaveValue('Иван Обновлённый');
+      expect(screen.getByLabelText(/email/i)).toHaveValue('new@example.com');
+    });
+  });
+
   it('submits name and email via PATCH /api/user/profile and calls updateUser', async () => {
     const updatedProfile = { ...mockUser, name: 'Иван Новый' };
     const fetchMock = vi.fn().mockResolvedValue({

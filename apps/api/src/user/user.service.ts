@@ -187,11 +187,15 @@ export class UserService {
   async changePassword(userId: string, password: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true },
+      select: { id: true, password: true },
     });
 
     if (!user) {
       throw new NotFoundException(`User with id "${userId}" not found`);
+    }
+
+    if (user.password && (await bcrypt.compare(password, user.password))) {
+      throw new BadRequestException('New password must differ from the current one');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);

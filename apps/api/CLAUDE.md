@@ -82,7 +82,8 @@ apps/api/
 │       │   └── all-exceptions.filter.ts
 │       └── utils/
 │           ├── file-name.util.ts
-│           └── profile-mapper.util.ts  # единый маппинг профиля (toProfile) для UserService и GetMeHandler
+│           ├── profile-mapper.util.ts  # единый маппинг профиля (toProfile) для UserService и GetMeHandler
+│           └── trust-proxy.util.ts     # resolveTrustProxyHops — хопы reverse proxy (по умолчанию 0)
 ├── test/                     # E2E тесты
 │   ├── auth.e2e-spec.ts
 │   ├── meetings.e2e-spec.ts
@@ -162,7 +163,13 @@ Controller → Service → Prisma
 | --- | ------ | ---------- |
 | `THROTTLE_TTL_MS` | `900000` (15 мин) | Окно rate limit |
 | `THROTTLE_LIMIT` | `5` | Лимит попыток за окно |
-| `TRUST_PROXY_HOPS` | `1` | Хопы reverse proxy (`app.set('trust proxy', ...)`) — чтобы IP был корректным за прокси |
+| `TRUST_PROXY_HOPS` | `0` (trust proxy выключен) | Хопы reverse proxy (`app.set('trust proxy', ...)`). Выставляется **явно** в prod, если API стоит за прокси |
+
+### Требование к деплою (trust proxy)
+
+- **trust proxy по умолчанию выключен** (`TRUST_PROXY_HOPS` не задан / равен `0`): `req.ip` — реальный socket-IP клиента, подделка `X-Forwarded-For` не влияет на rate limit.
+- API в production должен быть доступен **только через reverse proxy** (nginx, ALB и т.п.). Если API доступен напрямую, а `TRUST_PROXY_HOPS > 0`, клиент подделывает `X-Forwarded-For` и IP-компонента лимита (`user+IP`) обесценивается (per-user лимит сохраняется).
+- При деплое за прокси задай `TRUST_PROXY_HOPS` = количество прокси-хопов (например, `1` для одного nginx). Не включай `trust proxy` без прокси перед API.
 
 ## Правила
 

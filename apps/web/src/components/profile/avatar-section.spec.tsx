@@ -146,6 +146,26 @@ describe('AvatarSection', () => {
     expect(bumpAvatarVersion).not.toHaveBeenCalled();
   });
 
+  it('shows the server size-limit message verbatim', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: async () => ({ message: 'Размер файла превышает лимит 5 МБ' }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { updateUser, bumpAvatarVersion } = renderSection();
+
+    selectFile(makeFile('avatar.png', 'image/png'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('Размер файла превышает лимит 5 МБ');
+    });
+    expect(toastDanger).toHaveBeenCalled();
+    expect(updateUser).not.toHaveBeenCalled();
+    expect(bumpAvatarVersion).not.toHaveBeenCalled();
+  });
+
   it('calls DELETE and updates context on successful removal', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

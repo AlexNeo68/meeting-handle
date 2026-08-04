@@ -1,0 +1,70 @@
+import { BadRequestException, HttpStatus, PayloadTooLargeException } from '@nestjs/common';
+import { MAX_AVATAR_SIZE } from '@meeting-ai/shared';
+import { AllExceptionsFilter } from './all-exceptions.filter';
+
+const AVATAR_SIZE_LIMIT_MESSAGE = `Размер файла превышает лимит ${MAX_AVATAR_SIZE / (1024 * 1024)} МБ`;
+
+function mockHost(url: string) {
+  const json = jest.fn();
+  const response = {
+    status: jest.fn(() => ({ json })),
+    json,
+  };
+  return {
+    getRequest: () => ({ originalUrl: url }),
+    getResponse: () => response,
+  };
+}
+
+describe('AllExceptionsFilter', () => {
+  const filter = new AllExceptionsFilter();
+
+  it('should map 413 on avatar upload to 400 with a Russian 5 MB message', () => {
+    const host = mockHost('/user/profile/avatar');
+
+    filter.catch(new PayloadTooLargeException(), {
+      switchToHttp: () => host,
+    } as Parameters<typeof filter.catch>[1]);
+
+    const { status, json } = host.getResponse();
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(json).toHaveBeenCalledWith({
+      statusCode: 400,
+      message: AVATAR_SIZE_LIMIT_MESSAGE,
+      error: 'Bad Request',
+    });
+  });
+
+  it('should map 413 on files upload to 400 keeping the previous message', () => {
+    const host = mockHost('/meetings/123e4567-e89b-12d3-a456-426614174000/files');
+
+    filter.catch(new PayloadTooLargeException(), {
+      switchToHttp: () => host,
+    } as Parameters<typeof filter.catch>[1]);
+
+    const { status, json } = host.getResponse();
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(json).toHaveBeenCalledWith({
+      statusCode: 400,
+      message: 'File size exceeds 100 MB limit',
+      error: 'Bad Request',
+    });
+  });
+
+  it('should pass through non-413 HttpExceptions unchanged', () => {
+    const host = mockHost('/user/profile/avatar');
+    const exception = new BadRequestException('Unsupported avatar type');
+
+    filter.catch(exception, {
+      switchToHttp: () => host,
+    } as Parameters<typeof filter.catch>[1]);
+
+    const { status, json } = host.getResponse();
+    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
+    expect(json).toHaveBeenCalledWith({
+      statusCode: 400,
+      message: 'Unsupported avatar type',
+      error: 'Bad Request',
+    });
+  });
+});
