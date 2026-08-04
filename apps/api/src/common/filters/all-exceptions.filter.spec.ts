@@ -2,7 +2,7 @@ import { BadRequestException, HttpStatus, PayloadTooLargeException } from '@nest
 import { MAX_AVATAR_SIZE } from '@meeting-ai/shared';
 import { AllExceptionsFilter } from './all-exceptions.filter';
 
-const AVATAR_SIZE_LIMIT_MESSAGE = `Размер файла превышает лимит ${MAX_AVATAR_SIZE / (1024 * 1024)} МБ`;
+const AVATAR_SIZE_LIMIT_MESSAGE = `File size exceeds ${MAX_AVATAR_SIZE / (1024 * 1024)} MB limit`;
 
 function mockHost(url: string) {
   const json = jest.fn();
@@ -19,7 +19,7 @@ function mockHost(url: string) {
 describe('AllExceptionsFilter', () => {
   const filter = new AllExceptionsFilter();
 
-  it('should map 413 on avatar upload to 400 with a Russian 5 MB message', () => {
+  it('should map 413 on avatar upload to 400 with an English 5 MB size-limit key', () => {
     const host = mockHost('/user/profile/avatar');
 
     filter.catch(new PayloadTooLargeException(), {
@@ -35,7 +35,7 @@ describe('AllExceptionsFilter', () => {
     });
   });
 
-  it('should map 413 on files upload to 400 keeping the previous message', () => {
+  it('should map 413 on files upload to 400 with an English 100 MB size-limit key', () => {
     const host = mockHost('/meetings/123e4567-e89b-12d3-a456-426614174000/files');
 
     filter.catch(new PayloadTooLargeException(), {

@@ -7,8 +7,8 @@
   "gates": ["npm run lint"],
   "phases": [
     {
-      "milestone": "P4 (Review follow-ups)",
-      "branch": "feat/review-followups",
+      "milestone": "P5 (Polish)",
+      "branch": "feat/polish",
       "tests": ["npm run test:web", "npm run test:api"],
       "gates": ["npm run lint"]
     }

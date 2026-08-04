@@ -63,7 +63,7 @@ apps/web/
 │   ├── contexts/
 │   │   └── auth-context.tsx    # useAuth(): token/user (name/hasAvatar)/login/logout/updateUser/avatarVersion
 │   ├── lib/
-│   │   ├── api-errors.ts       # перевод англ. сообщений сервера на русский (translateApiError)
+│   │   ├── api-errors.ts       # единая стратегия ошибок: сервер отдаёт английские ключи, фронт переводит на русский (translateApiError)
 │   │   ├── format-date.ts      # общий форматтер дат (formatDate)
 │   │   └── format-file-size.ts # общий форматтер размеров (formatFileSize, B/KB/MB/GB/TB)
 │   └── test-setup.ts           # vitest setup (jsdom, localStorage)

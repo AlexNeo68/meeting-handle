@@ -28,8 +28,15 @@ describe('translateApiError', () => {
     );
   });
 
-  it('maps generic server errors to Russian', () => {
+  it('maps file size-limit messages to Russian regardless of the limit', () => {
+    expect(translateApiError('File size exceeds 5 MB limit')).toBe('Файл слишком большой');
     expect(translateApiError('File size exceeds 100 MB limit')).toBe('Файл слишком большой');
+    expect(
+      translateApiError(['File size exceeds 5 MB limit'], 'Не удалось загрузить аватар'),
+    ).toBe('Файл слишком большой');
+  });
+
+  it('maps generic server errors to Russian', () => {
     expect(translateApiError('Insufficient storage')).toBe('Недостаточно места на сервере');
     expect(translateApiError('Too Many Requests')).toBe('Слишком много попыток. Попробуйте позже.');
     expect(translateApiError('Internal server error')).toBe(
@@ -40,18 +47,6 @@ describe('translateApiError', () => {
   it('uses the provided fallback for unknown messages', () => {
     expect(translateApiError('Some unknown error', 'Не удалось удалить аватар')).toBe(
       'Не удалось удалить аватар',
-    );
-  });
-
-  it('passes through server messages already in Russian', () => {
-    expect(translateApiError('Размер файла превышает лимит 5 МБ')).toBe(
-      'Размер файла превышает лимит 5 МБ',
-    );
-    expect(
-      translateApiError('Размер файла превышает лимит 5 МБ', 'Не удалось загрузить аватар'),
-    ).toBe('Размер файла превышает лимит 5 МБ');
-    expect(translateApiError(['Размер файла превышает лимит 5 МБ'])).toBe(
-      'Размер файла превышает лимит 5 МБ',
     );
   });
 

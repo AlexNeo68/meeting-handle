@@ -2,8 +2,15 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus } from
 import { MAX_AVATAR_SIZE, MAX_FILE_SIZE } from '@meeting-ai/shared';
 import { Request, Response } from 'express';
 
-const FILE_SIZE_LIMIT_MESSAGE = `File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)} MB limit`;
-const AVATAR_SIZE_LIMIT_MESSAGE = `Размер файла превышает лимит ${MAX_AVATAR_SIZE / (1024 * 1024)} МБ`;
+// Error message language strategy:
+// The API returns user-facing errors in English as stable keys. The web app
+// translates them to Russian in one place — translateApiError
+// (apps/web/src/lib/api-errors.ts). Never return localized (e.g. Russian)
+// messages from the server.
+
+function fileSizeLimitMessage(maxBytes: number): string {
+  return `File size exceeds ${maxBytes / (1024 * 1024)} MB limit`;
+}
 
 function isAvatarUpload(request: Request): boolean {
   const path = request.route?.path ?? request.originalUrl ?? '';
@@ -18,9 +25,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       if (exception.getStatus() === HttpStatus.PAYLOAD_TOO_LARGE) {
         const request = host.switchToHttp().getRequest<Request>();
+        const limit = isAvatarUpload(request) ? MAX_AVATAR_SIZE : MAX_FILE_SIZE;
         response.status(HttpStatus.BAD_REQUEST).json({
           statusCode: 400,
-          message: isAvatarUpload(request) ? AVATAR_SIZE_LIMIT_MESSAGE : FILE_SIZE_LIMIT_MESSAGE,
+          message: fileSizeLimitMessage(limit),
           error: 'Bad Request',
         });
         return;

@@ -76,6 +76,31 @@ describe('GeneralSection', () => {
     });
   });
 
+  it('does not overwrite unsaved input when the context user changes', async () => {
+    const { rerender } = renderSection();
+    const user = userEvent.setup();
+
+    const nameInput = screen.getByLabelText(/имя/i);
+    const emailInput = screen.getByLabelText(/email/i);
+
+    await user.clear(nameInput);
+    await user.type(nameInput, 'Иван Введённый');
+    await user.clear(emailInput);
+    await user.type(emailInput, 'edited@example.com');
+
+    mockUseAuth.mockReturnValue({
+      user: { ...mockUser, name: 'Иван Из Контекста', email: 'context@example.com' },
+      token: 'jwt-token',
+      updateUser: vi.fn(),
+    });
+    rerender(<GeneralSection />);
+
+    await waitFor(() => {
+      expect(nameInput).toHaveValue('Иван Введённый');
+      expect(emailInput).toHaveValue('edited@example.com');
+    });
+  });
+
   it('submits name and email via PATCH /api/user/profile and calls updateUser', async () => {
     const updatedProfile = { ...mockUser, name: 'Иван Новый' };
     const fetchMock = vi.fn().mockResolvedValue({
