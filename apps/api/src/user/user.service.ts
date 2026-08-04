@@ -118,6 +118,29 @@ export class UserService {
     }
   }
 
+  async removeAvatar(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarStoragePath: true },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with id "${userId}" not found`);
+    }
+
+    if (user.avatarStoragePath) {
+      await this.removeStoredAvatar(user.avatarStoragePath);
+    }
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarStoragePath: null },
+      select: { id: true },
+    });
+
+    return { message: 'Avatar deleted' };
+  }
+
   async getAvatar(userId: string) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
