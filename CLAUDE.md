@@ -69,6 +69,8 @@ meeting-ai/
 │       └── e2e/             # Playwright e2e-тесты (file-upload.spec.ts)
 ├── packages/
 │   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы), getFileKind
+├── .claude/
+│   └── agents/              # субагенты-ревьюеры: security-review, performance-review, test-coverage
 ├── design-system/           # ui-ux-pro-max master (палитра, типографика, токены)
 ├── playwright.config.ts     # конфиг web e2e (webServer api+web, reuseExistingServer)
 ├── package.json             # корень monorepo (workspaces)
@@ -131,6 +133,7 @@ npm run build -w apps/api   # сборка только api
 | `vercel-react-best-practices` | `.claude/skills/vercel-react-best-practices/` | React/Next.js оптимизация |
 | `issues` | `.claude/skills/issues/` | Публикация плана (PRD, spec, tickets) как GitHub issues и milestones |
 | `ui-ux-pro-max` | `.claude/skills/ui-ux-pro-max/` | Универсальная база UI/UX правил (84 стиля, 192 палитры, 98 гайдлайнов) |
+| `parallel-code-review` | `.claude/skills/parallel-code-review/` | Параллельный запуск трёх субагентов-ревьюеров (security, performance, test-coverage) и агрегация отчёта |
 
 - **При добавлении новой функциональности или возможности** — актуализируй скиллы проекта, чтобы в них всегда была информация об актуальной кодовой базе и о том, где какая функция реализована.
 - Если скилл ссылается на конкретные файлы, модули, эндпоинты или компоненты — проверь, что пути и описания соответствуют текущей структуре проекта.
