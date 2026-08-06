@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './test-env';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import * as request from 'supertest';
@@ -141,6 +141,25 @@ describe('Meetings (e2e)', () => {
 
       expect(res.body).toEqual([]);
     });
+
+    it('should return 401 without auth', async () => {
+      await request(app.getHttpServer()).get('/meetings').expect(401);
+    });
+
+    it('should not leak another user meetings in the list (IDOR on list)', async () => {
+      const { token: user1Token } = await register('list-owner@example.com');
+      const { token: user2Token } = await register('list-intruder@example.com');
+
+      await createMeeting(user1Token, 'Private Meeting A');
+      await createMeeting(user1Token, 'Private Meeting B');
+
+      const res = await request(app.getHttpServer())
+        .get('/meetings')
+        .set('Authorization', `Bearer ${user2Token}`)
+        .expect(200);
+
+      expect(res.body).toEqual([]);
+    });
   });
 
   describe('GET /meetings/:id', () => {
@@ -181,6 +200,15 @@ describe('Meetings (e2e)', () => {
       await request(app.getHttpServer())
         .get(`/meetings/${createRes.body.id}`)
         .set('Authorization', `Bearer ${user2Token}`)
+        .expect(404);
+    });
+
+    it('should return 404 for a malformed (non-UUID) meeting id instead of 500', async () => {
+      const { token } = await register('malformed-id@example.com');
+
+      await request(app.getHttpServer())
+        .get('/meetings/not-a-uuid')
+        .set('Authorization', `Bearer ${token}`)
         .expect(404);
     });
   });

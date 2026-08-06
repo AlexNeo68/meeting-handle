@@ -15,8 +15,11 @@ export class LoginHandler implements IQueryHandler<LoginQuery> {
   ) {}
 
   async execute(query: LoginQuery) {
+    const email = query.email.trim().toLowerCase();
+
     const user = await this.prisma.user.findUnique({
-      where: { email: query.email },
+      where: { email },
+      select: { id: true, email: true, password: true, tokenVersion: true },
     });
 
     if (!user) {
@@ -31,7 +34,11 @@ export class LoginHandler implements IQueryHandler<LoginQuery> {
 
     this.eventBus.publish(new UserLoggedInEvent(user.id, user.email));
 
-    const token = this.jwtService.sign({ sub: user.id, email: user.email });
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      tokenVersion: user.tokenVersion,
+    });
 
     return {
       token,

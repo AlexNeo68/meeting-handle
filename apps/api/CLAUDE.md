@@ -81,12 +81,18 @@ apps/api/
 │       ├── filters/
 │       │   └── all-exceptions.filter.ts
 │       └── utils/
+│           ├── cors.util.ts           # resolveCorsOrigins — allowlist из CORS_ORIGINS
 │           ├── file-name.util.ts
+│           ├── jwt-secret.util.ts     # resolveJwtSecret — JWT_SECRET ≥ 32 символов (fail-fast)
 │           ├── profile-mapper.util.ts  # единый маппинг профиля (toProfile) для UserService и GetMeHandler
-│           └── trust-proxy.util.ts     # resolveTrustProxyHops — хопы reverse proxy (по умолчанию 0)
+│           ├── trust-proxy.util.ts     # resolveTrustProxyHops — хопы reverse proxy (по умолчанию 0)
+│           └── uuid.util.ts            # isUuid — валидация UUID до формирования путей на диске
 ├── test/                     # E2E тесты
+│   ├── test-env.ts           # ensureTestJwtSecret (≥32) + поднятие THROTTLE_LIMIT
 │   ├── auth.e2e-spec.ts
 │   ├── meetings.e2e-spec.ts
+│   ├── files.e2e-spec.ts
+│   ├── user-avatar.e2e-spec.ts
 │   ├── password.e2e-spec.ts  # смена пароля + rate limit (user+IP)
 │   └── jest-e2e.json
 ├── nest-cli.json
@@ -155,9 +161,14 @@ Controller → Service → Prisma
 
 Простой CRUD без шины: контроллер вызывает методы сервиса напрямую.
 
-## Rate limiting (смена пароля)
+## Rate limiting
 
-`PATCH /user/password` защищён `@UseGuards(ChangePasswordThrottlerGuard)` — кастомный `ThrottlerGuard`, у которого `getTracker` переопределён на `user.sub + ip` (NFR-13: ≤ 5 попыток / 15 мин per user+IP). Один и тот же IP не блокирует других пользователей, и наоборот. Конфигурация:
+`POST /auth/register` и `POST /auth/login` защищены `@UseGuards(ThrottlerGuard)`
+(NFR-13: ≤ 5 попыток / 15 мин per IP). `PATCH /user/password` защищён
+`@UseGuards(ChangePasswordThrottlerGuard)` — кастомный `ThrottlerGuard`, у которого
+`getTracker` переопределён на `user.sub + ip` (≤ 5 попыток / 15 мин per user+IP,
+лимит зафиксирован `@Throttle`). Один и тот же IP не блокирует других
+пользователей, и наоборот. Конфигурация:
 
 | Env | Дефолт | Назначение |
 | --- | ------ | ---------- |
@@ -177,16 +188,21 @@ Controller → Service → Prisma
 
 ## Кэширование аватаров
 
-`GET /user/profile/avatar` отдаёт `Cache-Control: private, no-store` +
-`X-Content-Type-Options: nosniff` (`user.controller.ts`). `no-store` — осознанный
-выбор: аватар приватный, URL без user-scoped ключа (пользователь — только в
-`Authorization: Bearer`), утечка между пользователями исключается. Трейдофф:
-каждый рендер аватара (шапка на каждой странице, профиль) ходит в сеть.
+`GET /user/profile/avatar` отдаёт `Cache-Control: private, max-age=31536000,
+immutable` + `Vary: Authorization` + `ETag` (ключ — size+mtime) + `304 Not
+Modified` на `If-None-Match` + `X-Content-Type-Options: nosniff`
+(`user.controller.ts`). Аватар приватный (пользователь — только в
+`Authorization: Bearer`), поэтому кэш приватный, а версия аватара
+брейк-кэшируется на клиенте через `?v=` (avatarVersion в `auth-context`).
+Фронтенд дедуплицирует запросы аватара между инстансами (header + profile)
+через module-level кэш промисов в `user-avatar.tsx`.
 
-Путь к кэшированию без утечки — `private, max-age=31536000, immutable` +
-user-scoped ключ (включая идентификатор пользователя в URL или `?v=version`)
-+ `Vary: Authorization` + `ETag`/`304` — и полное обоснование трейдоффа:
-`docs/deployment.md` → «Кэширование аватаров».
+Смена пароля инвалидирует все ранее выданные JWT: в `User.tokenVersion`
+хранится текущая версия токена, она кладётся в payload при sign, а
+`JwtStrategy.validate` сверяет её с БД на каждом запросе и при несовпадении
+возвращает 401. `PATCH /user/password` инкрементирует `tokenVersion`.
+Фронтенд после смены пароля автоматически перелогинивается, чтобы обновить
+токен (`password-section.tsx`).
 
 ## Правила
 

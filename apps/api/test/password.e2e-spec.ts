@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './test-env';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -49,6 +49,27 @@ describe('Password change (e2e)', () => {
       .patch('/user/password')
       .set('Authorization', `Bearer ${bearer}`)
       .send({ password });
+
+  const loginAs = async (email: string, password: string) => {
+    const res = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email, password })
+      .expect(200);
+    return res.body.token as string;
+  };
+
+  // Every successful password change bumps tokenVersion, invalidating previous
+  // JWTs, so each attempt needs a fresh token from the current password.
+  const exhaustLimit = async (email: string, initialPassword: string) => {
+    let currentPassword = initialPassword;
+    for (let i = 0; i < 5; i++) {
+      const freshToken = await loginAs(email, currentPassword);
+      const nextPassword = `newpassword${i}`;
+      await patchPassword(nextPassword, freshToken).expect(200);
+      currentPassword = nextPassword;
+    }
+    return currentPassword;
+  };
 
   describe('PATCH /user/password', () => {
     it('should change the password and return 200', async () => {
@@ -103,51 +124,56 @@ describe('Password change (e2e)', () => {
     });
 
     it('should return 429 after exceeding the request limit', async () => {
-      for (let i = 0; i < 5; i++) {
-        await patchPassword(`newpassword${i}`).expect(200);
-      }
+      const currentPassword = await exhaustLimit('password@example.com', 'password123');
 
-      const res = await patchPassword('newpassword5').expect(429);
+      const freshToken = await loginAs('password@example.com', currentPassword);
+      await patchPassword('newpassword5', freshToken).expect(429);
 
-      expect(res.body).toBeDefined();
+      expect(freshToken).toBeDefined();
     });
 
     it('should not block a different user behind the same IP', async () => {
-      for (let i = 0; i < 5; i++) {
-        await patchPassword(`newpassword${i}`).expect(200);
-      }
-      await patchPassword('newpassword5').expect(429);
+      await exhaustLimit('password@example.com', 'password123');
 
       const siblingRes = await request(app.getHttpServer())
         .post('/auth/register')
         .send({ email: 'sibling@example.com', password: 'siblingpass123' });
 
+      const siblingToken = siblingRes.body.token as string;
+
       await request(app.getHttpServer())
         .patch('/user/password')
-        .set('Authorization', `Bearer ${siblingRes.body.token}`)
+        .set('Authorization', `Bearer ${siblingToken}`)
         .send({ password: 'siblingnewpass123' })
         .expect(200);
     });
 
     it('should not block the same user behind a different IP', async () => {
+      let currentPassword = 'password123';
       for (let i = 0; i < 5; i++) {
+        const freshToken = await loginAs('password@example.com', currentPassword);
+        const nextPassword = `newpassword${i}`;
         await request(app.getHttpServer())
           .patch('/user/password')
-          .set('Authorization', `Bearer ${token}`)
+          .set('Authorization', `Bearer ${freshToken}`)
           .set('X-Forwarded-For', '10.0.0.1')
-          .send({ password: `newpassword${i}` })
+          .send({ password: nextPassword })
           .expect(200);
+        currentPassword = nextPassword;
       }
+
+      const blockedToken = await loginAs('password@example.com', currentPassword);
       await request(app.getHttpServer())
         .patch('/user/password')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${blockedToken}`)
         .set('X-Forwarded-For', '10.0.0.1')
         .send({ password: 'newpassword5' })
         .expect(429);
 
+      const otherIpToken = await loginAs('password@example.com', currentPassword);
       await request(app.getHttpServer())
         .patch('/user/password')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${otherIpToken}`)
         .set('X-Forwarded-For', '10.0.0.2')
         .send({ password: 'newpassword6' })
         .expect(200);
@@ -159,7 +185,6 @@ describe('Password change — rate limit with trust proxy disabled (default)', (
   let app: NestExpressApplication;
   let prisma: PrismaService;
   let storage: { storage: Map<string, unknown> };
-  let token: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -181,10 +206,9 @@ describe('Password change — rate limit with trust proxy disabled (default)', (
     await prisma.meeting.deleteMany();
     await prisma.user.deleteMany();
 
-    const userRes = await request(app.getHttpServer())
+    await request(app.getHttpServer())
       .post('/auth/register')
       .send({ email: 'noproxy@example.com', password: 'password123' });
-    token = userRes.body.token;
   });
 
   afterAll(async () => {
@@ -192,18 +216,30 @@ describe('Password change — rate limit with trust proxy disabled (default)', (
   });
 
   it('should NOT trust the X-Forwarded-For header when trust proxy is off, so spoofed IPs cannot bypass the limit', async () => {
+    let currentPassword = 'password123';
     for (let i = 0; i < 5; i++) {
+      const res = await request(app.getHttpServer())
+        .post('/auth/login')
+        .send({ email: 'noproxy@example.com', password: currentPassword })
+        .expect(200);
+      const nextPassword = `newpassword${i}`;
       await request(app.getHttpServer())
         .patch('/user/password')
-        .set('Authorization', `Bearer ${token}`)
+        .set('Authorization', `Bearer ${res.body.token}`)
         .set('X-Forwarded-For', `203.0.113.${i}`)
-        .send({ password: `newpassword${i}` })
+        .send({ password: nextPassword })
         .expect(200);
+      currentPassword = nextPassword;
     }
+
+    const res = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: 'noproxy@example.com', password: currentPassword })
+      .expect(200);
 
     await request(app.getHttpServer())
       .patch('/user/password')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Authorization', `Bearer ${res.body.token}`)
       .set('X-Forwarded-For', '203.0.113.99')
       .send({ password: 'newpassword99' })
       .expect(429);

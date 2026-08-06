@@ -87,7 +87,7 @@ const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(function FileUp
           }
           return;
         }
-        toast.danger(translateApiError(parseErrorStatus(xhr.responseText), 'Не удалось загрузить файл'));
+        toast.danger(translateApiError(parseErrorStatus(xhr.responseText, 'Не удалось загрузить файл')));
       };
 
       xhr.onerror = () => {

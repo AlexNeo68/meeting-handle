@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './test-env';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -264,6 +264,24 @@ describe('Files (e2e)', () => {
         .expect(404);
     });
 
+    it('should return 403 when the stored path escapes the upload dir (path traversal)', async () => {
+      const record = await prisma.meetingFile.create({
+        data: {
+          storagePath: '../../../../etc/passwd',
+          originalName: 'escape.pdf',
+          mimeType: 'application/pdf',
+          size: 10,
+          meetingId,
+          userId: ownerUserId,
+        },
+      });
+
+      await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files/${record.id}/download`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(403);
+    });
+
     it('should return 404 when downloading another user file', async () => {
       const uploadRes = await uploadPdf().expect(201);
 
@@ -317,6 +335,24 @@ describe('Files (e2e)', () => {
     it('should return 404 for a non-existent file', async () => {
       await request(app.getHttpServer())
         .get(`/meetings/${meetingId}/files/00000000-0000-0000-0000-000000000000/preview`)
+        .set('Authorization', `Bearer ${token}`)
+        .expect(404);
+    });
+
+    it('should return 404 when the file is missing on disk', async () => {
+      const record = await prisma.meetingFile.create({
+        data: {
+          storagePath: `missing/${crypto.randomUUID()}.pdf`,
+          originalName: 'ghost.pdf',
+          mimeType: 'application/pdf',
+          size: 10,
+          meetingId,
+          userId: ownerUserId,
+        },
+      });
+
+      await request(app.getHttpServer())
+        .get(`/meetings/${meetingId}/files/${record.id}/preview`)
         .set('Authorization', `Bearer ${token}`)
         .expect(404);
     });

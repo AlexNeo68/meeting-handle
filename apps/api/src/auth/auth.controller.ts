@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserId } from '../common/decorators/user-id.decorator';
 import { RegisterCommand } from './commands/register.command';
@@ -16,12 +17,14 @@ export class AuthController {
   ) {}
 
   @Post('register')
+  @UseGuards(ThrottlerGuard)
   async register(@Body() dto: RegisterDto) {
     return this.commandBus.execute(new RegisterCommand(dto.email, dto.password, dto.name));
   }
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
   async login(@Body() dto: LoginDto) {
     return this.queryBus.execute(new LoginQuery(dto.email, dto.password));
   }

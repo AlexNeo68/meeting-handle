@@ -1,4 +1,4 @@
-import 'dotenv/config';
+import './test-env';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -141,7 +141,7 @@ describe('User Avatar (e2e)', () => {
 
       expect(res.headers['content-type']).toContain('image/jpeg');
       expect(res.headers['x-content-type-options']).toBe('nosniff');
-      expect(res.headers['cache-control']).toBe('private, no-store');
+      expect(res.headers['cache-control']).toBe('private, max-age=31536000, immutable');
       expect((res.body as Buffer).toString('utf8')).toBe('fake-jpeg-bytes');
     });
 

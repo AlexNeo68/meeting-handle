@@ -71,17 +71,17 @@ export class FilesService {
     const files = await this.prisma.meetingFile.findMany({
       where: { meetingId, userId },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        originalName: true,
+        mimeType: true,
+        size: true,
+        createdAt: true,
+      },
+      take: 50,
     });
 
-    return {
-      files: files.map((file) => ({
-        id: file.id,
-        originalName: file.originalName,
-        mimeType: file.mimeType,
-        size: file.size,
-        createdAt: file.createdAt,
-      })),
-    };
+    return { files };
   }
 
   async findOwned(fileId: string, meetingId: string, userId: string) {

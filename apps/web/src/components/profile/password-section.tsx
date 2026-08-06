@@ -21,7 +21,7 @@ function validateNewPassword(value: string): string | null {
 }
 
 export default function PasswordSection() {
-  const { token } = useAuth();
+  const { token, user, login, logout } = useAuth();
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +63,17 @@ export default function PasswordSection() {
 
         setNewPassword('');
         setConfirmPassword('');
+
+        // Changing the password invalidates previously issued JWTs, so refresh
+        // the session immediately with the new password.
+        if (user?.email) {
+          try {
+            await login(user.email, newPassword);
+          } catch {
+            logout();
+          }
+        }
+
         toast.success('Пароль изменён');
       } catch {
         toast.danger('Ошибка сети. Попробуйте ещё раз.');
@@ -70,7 +81,7 @@ export default function PasswordSection() {
         setIsSaving(false);
       }
     },
-    [newPassword, token],
+    [newPassword, token, user?.email, login, logout],
   );
 
   return (

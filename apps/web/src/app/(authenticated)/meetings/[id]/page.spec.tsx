@@ -43,7 +43,7 @@ describe('MeetingDetailPage', () => {
 
     render(<MeetingDetailPage />);
 
-    expect(screen.getByText(/загрузка/i)).toBeInTheDocument();
+    expect(screen.getByLabelText('Загрузка встречи')).toBeInTheDocument();
   });
 
   it('renders meeting info', async () => {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserId } from '../common/decorators/user-id.decorator';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
@@ -20,7 +20,10 @@ export class MeetingController {
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string, @UserId() userId: string) {
+  async findOne(
+    @Param('id', new ParseUUIDPipe({ errorHttpStatusCode: HttpStatus.NOT_FOUND })) id: string,
+    @UserId() userId: string,
+  ) {
     return this.meetingService.findOne(id, userId);
   }
 }

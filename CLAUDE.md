@@ -28,7 +28,8 @@ npm run build            # сборка shared + обоих приложений
 | `npm run build:shared` | Сборка `@meeting-ai/shared` (`packages/shared`)   |
 | `npm run build:web`    | Только web                                        |
 | `npm run build:api`    | Только api                                        |
-| `npm run test`         | Тесты web + api (unit)                            |
+| `npm run test`         | Тесты shared + web + api (unit)                   |
+| `npm run test:shared`  | Тесты только `@meeting-ai/shared` (Vitest)        |
 | `npm run test:web`     | Тесты только web (Vitest)                         |
 | `npm run test:api`     | Тесты только api (Jest, unit)                     |
 | `npm run test:e2e`     | E2E: api (Jest, supertest) + web (Playwright)     |
@@ -68,7 +69,7 @@ meeting-ai/
 │       │       └── lib/         # api-errors.ts (перевод ошибок API на русский), format-date.ts, format-file-size.ts (общие форматтеры)
 │       └── e2e/             # Playwright e2e-тесты (file-upload.spec.ts)
 ├── packages/
-│   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы), getFileKind
+│   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы), getFileKind, unit-тесты (Vitest)
 ├── .claude/
 │   └── agents/              # субагенты-ревьюеры: security-review, performance-review, test-coverage
 ├── design-system/           # ui-ux-pro-max master (палитра, типографика, токены)

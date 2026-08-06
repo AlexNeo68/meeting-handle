@@ -49,11 +49,11 @@ describe('RegisterHandler', () => {
     const command = new RegisterCommand('user@example.com', 'password123');
     const hashedPassword = await bcrypt.hash(command.password, 10);
 
-    mockPrisma.user.findUnique.mockResolvedValue(null);
     mockPrisma.user.create.mockResolvedValue({
       id: 'uuid-123',
       email: command.email,
       password: hashedPassword,
+      tokenVersion: 0,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -73,24 +73,9 @@ describe('RegisterHandler', () => {
     expect(bcrypt.compareSync(command.password, hashedPassword)).toBe(true);
   });
 
-  it('should throw ConflictException when email already exists', async () => {
+  it('should throw ConflictException when email already exists (create races, P2002)', async () => {
     const command = new RegisterCommand('existing@example.com', 'password123');
 
-    mockPrisma.user.findUnique.mockResolvedValue({
-      id: 'existing-id',
-      email: command.email,
-    });
-
-    await expect(handler.execute(command)).rejects.toThrow(ConflictException);
-
-    expect(mockPrisma.user.create).not.toHaveBeenCalled();
-    expect(eventBus.publish).not.toHaveBeenCalled();
-  });
-
-  it('should throw ConflictException when create races on a unique email (P2002)', async () => {
-    const command = new RegisterCommand('racing@example.com', 'password123');
-
-    mockPrisma.user.findUnique.mockResolvedValue(null);
     mockPrisma.user.create.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError(
         'Unique constraint failed on the fields: (`email`)',
@@ -103,10 +88,30 @@ describe('RegisterHandler', () => {
     expect(eventBus.publish).not.toHaveBeenCalled();
   });
 
+  it('should normalize the email before creating the user', async () => {
+    const command = new RegisterCommand('  USER@Example.COM  ', 'password123');
+
+    mockPrisma.user.create.mockResolvedValue({
+      id: 'uuid-321',
+      email: 'user@example.com',
+      password: 'hashed',
+      tokenVersion: 0,
+    });
+
+    await handler.execute(command);
+
+    expect(mockPrisma.user.create).toHaveBeenCalledWith({
+      data: {
+        email: 'user@example.com',
+        password: expect.any(String),
+        name: null,
+      },
+    });
+  });
+
   it('should persist trimmed name on create', async () => {
     const command = new RegisterCommand('named@example.com', 'password123', '  Alice  ');
 
-    mockPrisma.user.findUnique.mockResolvedValue(null);
     mockPrisma.user.create.mockResolvedValue({
       id: 'uuid-456',
       email: command.email,
@@ -128,7 +133,6 @@ describe('RegisterHandler', () => {
   it('should persist null name when name is missing or blank', async () => {
     const command = new RegisterCommand('blank@example.com', 'password123', '   ');
 
-    mockPrisma.user.findUnique.mockResolvedValue(null);
     mockPrisma.user.create.mockResolvedValue({
       id: 'uuid-789',
       email: command.email,

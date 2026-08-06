@@ -19,6 +19,10 @@ export default defineConfig({
       url: 'http://localhost:3001/meetings',
       reuseExistingServer: true,
       timeout: 120_000,
+      env: {
+        ...process.env,
+        THROTTLE_LIMIT: '100000',
+      },
     },
     {
       command: 'npm run dev:web',

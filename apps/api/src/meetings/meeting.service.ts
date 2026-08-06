@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMeetingDto } from './dto/create-meeting.dto';
 
+const PAGE_SIZE = 50;
+
 @Injectable()
 export class MeetingService {
   constructor(private readonly prisma: PrismaService) {}
@@ -21,6 +23,7 @@ export class MeetingService {
     return this.prisma.meeting.findMany({
       where: { userId },
       orderBy: { date: 'desc' },
+      take: PAGE_SIZE,
     });
   }
 

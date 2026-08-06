@@ -6,12 +6,18 @@ import { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer
 import { diskStorage } from 'multer';
 import { ALLOWED_AVATAR_MIME_TYPES, MAX_AVATAR_SIZE } from '@meeting-ai/shared';
 import { sanitizeOriginalName } from '../common/utils/file-name.util';
+import { isUuid } from '../common/utils/uuid.util';
 
 export function avatarDiskOptions(uploadDir: string): MulterOptions {
   return {
     storage: diskStorage({
       destination: (req, _file, cb) => {
-        const userId = (req.user as { sub?: string } | undefined)?.sub ?? '';
+        const userId = (req.user as { sub?: string } | undefined)?.sub;
+
+        if (!userId || !isUuid(userId)) {
+          return cb(new BadRequestException('Invalid user id'), '');
+        }
+
         const dir = join(uploadDir, userId, 'avatar');
         mkdirSync(dir, { recursive: true });
         cb(null, dir);

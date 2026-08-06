@@ -65,17 +65,11 @@ export class UserService {
       updateData.name = data.name.trim();
     }
 
-    if (data.email !== undefined && data.email !== user.email) {
-      const existing = await this.prisma.user.findUnique({
-        where: { email: data.email },
-        select: { id: true },
-      });
-
-      if (existing) {
-        throw new ConflictException('Email already exists');
+    if (data.email !== undefined) {
+      const normalizedEmail = data.email.trim().toLowerCase();
+      if (normalizedEmail !== user.email) {
+        updateData.email = normalizedEmail;
       }
-
-      updateData.email = data.email;
     }
 
     try {
@@ -168,8 +162,9 @@ export class UserService {
 
     const absPath = this.resolveAvatarPath(user.avatarStoragePath);
 
+    let stats;
     try {
-      await stat(absPath);
+      stats = await stat(absPath);
     } catch (err) {
       const fsError = err as NodeJS.ErrnoException;
       if (fsError.code === 'ENOENT') {
@@ -181,7 +176,13 @@ export class UserService {
     const mimeType =
       user.avatarMimeType ?? (await this.detector.detect(absPath)) ?? 'application/octet-stream';
 
-    return new StreamableFile(createReadStream(absPath), { type: mimeType });
+    // ETag keyed on file identity (size + mtime), enabling 304 responses.
+    const etag = `"${stats.size.toString(16)}-${Math.floor(stats.mtimeMs).toString(16)}"`;
+
+    return {
+      stream: new StreamableFile(createReadStream(absPath), { type: mimeType }),
+      etag,
+    };
   }
 
   async changePassword(userId: string, password: string) {
@@ -200,9 +201,10 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Invalidate all previously issued JWTs by bumping tokenVersion.
     await this.prisma.user.update({
       where: { id: userId },
-      data: { password: hashedPassword },
+      data: { password: hashedPassword, tokenVersion: { increment: 1 } },
       select: { id: true },
     });
 

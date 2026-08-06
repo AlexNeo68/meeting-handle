@@ -159,22 +159,24 @@ describe('UserService', () => {
       });
     });
 
-    it('should throw ConflictException when email is taken by another user', async () => {
-      mockPrisma.user.findUnique
-        .mockResolvedValueOnce({ id: 'uuid-123', email: 'user@example.com' })
-        .mockResolvedValueOnce({ id: 'other-user', email: 'taken@example.com' });
+    it('should throw ConflictException when email is taken by another user (P2002)', async () => {
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'uuid-123', email: 'user@example.com' });
+      mockPrisma.user.update.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError(
+          'Unique constraint failed on the fields: (`email`)',
+          { code: 'P2002', clientVersion: '7.9.0', meta: { target: ['email'] } },
+        ),
+      );
 
       await expect(
         service.updateProfile('uuid-123', { email: 'taken@example.com' }),
       ).rejects.toThrow(ConflictException);
 
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockPrisma.user.update).toHaveBeenCalled();
     });
 
     it('should update email when it is available', async () => {
-      mockPrisma.user.findUnique
-        .mockResolvedValueOnce({ id: 'uuid-123', email: 'user@example.com' })
-        .mockResolvedValueOnce(null);
+      mockPrisma.user.findUnique.mockResolvedValue({ id: 'uuid-123', email: 'user@example.com' });
       mockPrisma.user.update.mockResolvedValue({
         id: 'uuid-123',
         email: 'new@example.com',
@@ -198,23 +200,6 @@ describe('UserService', () => {
       await expect(service.updateProfile('non-existent', { name: 'Test' })).rejects.toThrow(
         NotFoundException,
       );
-    });
-
-    it('should throw ConflictException when update races on a unique email (P2002)', async () => {
-      mockPrisma.user.findUnique
-        .mockResolvedValueOnce({ id: 'uuid-123', email: 'user@example.com' })
-        .mockResolvedValueOnce(null);
-      mockPrisma.user.update.mockRejectedValue(
-        new Prisma.PrismaClientKnownRequestError(
-          'Unique constraint failed on the fields: (`email`)',
-          { code: 'P2002', clientVersion: '7.9.0', meta: { target: ['email'] } },
-        ),
-      );
-
-      await expect(service.updateProfile('uuid-123', { email: 'new@example.com' })).rejects.toThrow(
-        ConflictException,
-      );
-      expect(mockPrisma.user.update).toHaveBeenCalled();
     });
   });
 
@@ -456,7 +441,7 @@ describe('UserService', () => {
 
       expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: 'uuid-123' },
-        data: { password: expect.any(String) },
+        data: { password: expect.any(String), tokenVersion: { increment: 1 } },
         select: { id: true },
       });
       const passwordArg = (mockPrisma.user.update as jest.Mock).mock.calls[0][0].data.password;
@@ -502,12 +487,13 @@ describe('UserService', () => {
         avatarStoragePath: 'uuid-123/avatar/avatar.png',
         avatarMimeType: 'image/png',
       });
-      (stat as jest.Mock).mockResolvedValue({ size: 100 });
+      (stat as jest.Mock).mockResolvedValue({ size: 100, mtimeMs: 1700000000000 });
 
       const result = await service.getAvatar('uuid-123');
 
-      expect(result).toBeInstanceOf(StreamableFile);
-      expect(result.getHeaders().type).toBe('image/png');
+      expect(result.stream).toBeInstanceOf(StreamableFile);
+      expect(result.stream.getHeaders().type).toBe('image/png');
+      expect(result.etag).toMatch(/^"[\da-f]+-[\da-f]+"$/);
       expect(mockDetector.detect).not.toHaveBeenCalled();
     });
 
@@ -522,7 +508,7 @@ describe('UserService', () => {
 
       const result = await service.getAvatar('uuid-123');
 
-      expect(result.getHeaders().type).toBe('image/webp');
+      expect(result.stream.getHeaders().type).toBe('image/webp');
       expect(mockDetector.detect).toHaveBeenCalledWith(
         join(uploadDir, 'uuid-123/avatar/avatar.png'),
       );
@@ -539,7 +525,7 @@ describe('UserService', () => {
 
       const result = await service.getAvatar('uuid-123');
 
-      expect(result.getHeaders().type).toBe('application/octet-stream');
+      expect(result.stream.getHeaders().type).toBe('application/octet-stream');
     });
 
     it('should throw NotFoundException when user has no avatar', async () => {

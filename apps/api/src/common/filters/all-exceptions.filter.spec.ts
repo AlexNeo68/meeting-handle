@@ -87,4 +87,38 @@ describe('AllExceptionsFilter', () => {
       error: 'Internal Server Error',
     });
   });
+
+  it('should map an unhandled ENOSPC fs error to 507 Insufficient storage', () => {
+    const host = mockHost('/some/path');
+    const errnoError = Object.assign(new Error('No space left on device'), { code: 'ENOSPC' });
+
+    filter.catch(errnoError, {
+      switchToHttp: () => host,
+    } as Parameters<typeof filter.catch>[1]);
+
+    const { status, json } = host.getResponse();
+    expect(status).toHaveBeenCalledWith(507);
+    expect(json).toHaveBeenCalledWith({
+      statusCode: 507,
+      message: 'Insufficient storage',
+      error: 'Insufficient Storage',
+    });
+  });
+
+  it('should map an unhandled ENOENT fs error to 404 File not found', () => {
+    const host = mockHost('/some/path');
+    const errnoError = Object.assign(new Error('No such file or directory'), { code: 'ENOENT' });
+
+    filter.catch(errnoError, {
+      switchToHttp: () => host,
+    } as Parameters<typeof filter.catch>[1]);
+
+    const { status, json } = host.getResponse();
+    expect(status).toHaveBeenCalledWith(HttpStatus.NOT_FOUND);
+    expect(json).toHaveBeenCalledWith({
+      statusCode: 404,
+      message: 'File not found',
+      error: 'Not Found',
+    });
+  });
 });

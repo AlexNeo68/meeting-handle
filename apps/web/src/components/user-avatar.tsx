@@ -21,6 +21,40 @@ function getInitials(name: string | null, email: string): string {
   return email.charAt(0).toUpperCase();
 }
 
+// Deduplicate concurrent avatar fetches across UserAvatar instances (header
+// + profile page) — same user + avatarVersion resolves to a single in-flight
+// network request. The entry is evicted once the request settles, so a later
+// mount re-fetches (browser cache + ETag then handle revalidation).
+const avatarFetchCache = new Map<string, Promise<Blob>>();
+
+function fetchAvatarBlob(token: string, userId: string, avatarVersion: number): Promise<Blob> {
+  const key = `${userId}:${avatarVersion}`;
+  let pending = avatarFetchCache.get(key);
+
+  if (!pending) {
+    pending = fetch(`/api/user/profile/avatar?v=${avatarVersion}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).then(async (res) => {
+      if (!res.ok) {
+        throw new Error('Не удалось загрузить аватар');
+      }
+      return res.blob();
+    });
+    avatarFetchCache.set(key, pending);
+    pending
+      .finally(() => {
+        if (avatarFetchCache.get(key) === pending) {
+          avatarFetchCache.delete(key);
+        }
+      })
+      // The finally-chained promise propagates the rejection; consume it here —
+      // callers await the original `pending` and handle failures themselves.
+      .catch(() => undefined);
+  }
+
+  return pending;
+}
+
 export default function UserAvatar({ size = 96, className = '', isUploading = false }: UserAvatarProps) {
   const { user, token, avatarVersion } = useAuth();
   const hasAvatar = user?.hasAvatar ?? false;
@@ -37,18 +71,11 @@ export default function UserAvatar({ size = 96, className = '', isUploading = fa
 
     let objectUrl: string | null = null;
     let cancelled = false;
+    const accessToken = token;
 
     async function load() {
       try {
-        const res = await fetch(`/api/user/profile/avatar?v=${avatarVersion}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          throw new Error('Не удалось загрузить аватар');
-        }
-
-        const blob = await res.blob();
+        const blob = await fetchAvatarBlob(accessToken, userId, avatarVersion);
         if (cancelled) return;
 
         objectUrl = URL.createObjectURL(blob);

@@ -16,14 +16,7 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
   ) {}
 
   async execute(command: RegisterCommand) {
-    const existing = await this.prisma.user.findUnique({
-      where: { email: command.email },
-    });
-
-    if (existing) {
-      throw new ConflictException('Email already exists');
-    }
-
+    const email = command.email.trim().toLowerCase();
     const hashedPassword = await bcrypt.hash(command.password, 10);
 
     const trimmedName = command.name?.trim();
@@ -32,21 +25,25 @@ export class RegisterHandler implements ICommandHandler<RegisterCommand> {
     try {
       user = await this.prisma.user.create({
         data: {
-          email: command.email,
+          email,
           password: hashedPassword,
           name: trimmedName || null,
         },
       });
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
-        throw new ConflictException('Email already exists');
+        throw new ConflictException('Registration failed');
       }
       throw err;
     }
 
     this.eventBus.publish(new UserRegisteredEvent(user.id, user.email));
 
-    const token = this.jwtService.sign({ sub: user.id, email: user.email });
+    const token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+      tokenVersion: user.tokenVersion,
+    });
 
     return {
       token,

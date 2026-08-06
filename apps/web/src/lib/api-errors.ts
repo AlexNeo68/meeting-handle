@@ -16,6 +16,7 @@ const API_ERROR_TRANSLATIONS: Record<string, string> = {
   'Avatar content does not match allowed image types':
     'Содержимое файла не соответствует допустимым типам изображений.',
   'Email already exists': 'Этот email уже занят',
+  'Registration failed': 'Не удалось зарегистрироваться. Возможно, этот email уже занят',
   'Name must not be empty': 'Имя не может быть пустым',
   'email must be an email': 'Введите корректный email адрес',
   'password must be a string': 'Пароль должен быть строкой',

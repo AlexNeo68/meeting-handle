@@ -8,12 +8,16 @@ import {
   HttpStatus,
   Patch,
   Post,
+  Req,
+  Res,
   UploadedFile,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { Throttle } from '@nestjs/throttler';
+import { Request, Response } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserId } from '../common/decorators/user-id.decorator';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -45,6 +49,7 @@ export class UserController {
 
   @Patch('password')
   @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 15 * 60 * 1000 } })
   @UseGuards(ChangePasswordThrottlerGuard)
   async changePassword(@UserId() userId: string, @Body() dto: ChangePasswordDto) {
     return this.userService.changePassword(userId, dto.password);
@@ -64,8 +69,21 @@ export class UserController {
 
   @Get('profile/avatar')
   @Header('X-Content-Type-Options', 'nosniff')
-  @Header('Cache-Control', 'private, no-store')
-  async getAvatar(@UserId() userId: string) {
-    return this.userService.getAvatar(userId);
+  @Header('Cache-Control', 'private, max-age=31536000, immutable')
+  @Header('Vary', 'Authorization')
+  async getAvatar(
+    @UserId() userId: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const avatar = await this.userService.getAvatar(userId);
+
+    res.setHeader('ETag', avatar.etag);
+    if (req.headers['if-none-match'] === avatar.etag) {
+      res.status(HttpStatus.NOT_MODIFIED).send();
+      return;
+    }
+
+    return avatar.stream;
   }
 }

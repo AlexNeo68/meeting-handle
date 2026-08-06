@@ -27,6 +27,8 @@ function renderSection() {
     user: { id: 'user-1', email: 'ivan@example.com', name: 'Иван Петров', hasAvatar: false },
     token: 'jwt-token',
     updateUser: vi.fn(),
+    login: vi.fn().mockResolvedValue(undefined),
+    logout: vi.fn(),
   });
   return render(<PasswordSection />);
 }
@@ -105,7 +107,9 @@ describe('PasswordSection', () => {
         body: JSON.stringify({ password: 'newpass123' }),
       });
     });
-    expect(toastSuccess).toHaveBeenCalledWith('Пароль изменён');
+    await waitFor(() => {
+      expect(toastSuccess).toHaveBeenCalledWith('Пароль изменён');
+    });
   });
 
   it('clears the fields after a successful password change', async () => {

@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Card, Spinner } from '@heroui/react';
+import { Button, Card } from '@heroui/react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
@@ -62,15 +62,6 @@ export default function MeetingDetailPage() {
     fetchMeeting();
   }, [meetingId, token]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Spinner color="current" size="lg" />
-        <span className="ml-3 text-muted">Загрузка встречи...</span>
-      </div>
-    );
-  }
-
   if (isNotFound) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10">
@@ -109,10 +100,6 @@ export default function MeetingDetailPage() {
     );
   }
 
-  if (!meeting) {
-    return null;
-  }
-
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <Link
@@ -122,28 +109,39 @@ export default function MeetingDetailPage() {
         ← Назад к встречам
       </Link>
 
-      <Card className="mt-4">
-        <Card.Content className="gap-2">
-          <h1 className="text-2xl font-semibold">{meeting.title}</h1>
-          <p className="text-sm text-muted">{formatDate(meeting.date)}</p>
-          {meeting.participants.length > 0 && (
-            <div className="mt-2">
-              <h2 className="text-sm font-medium">Участники</h2>
-              <ul className="mt-1 flex flex-wrap gap-2" role="list" aria-label="Участники встречи">
-                {meeting.participants.map((participant) => (
-                  <li
-                    key={participant}
-                    className="rounded-full border border-divider px-3 py-1 text-xs text-muted"
-                  >
-                    {participant}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Card.Content>
-      </Card>
+      {isLoading || !meeting ? (
+        <Card className="mt-4">
+          <Card.Content className="gap-2" aria-busy="true" aria-label="Загрузка встречи">
+            <div className="h-7 w-2/3 rounded bg-content3" />
+            <div className="mt-2 h-4 w-1/3 rounded bg-content3" />
+          </Card.Content>
+        </Card>
+      ) : (
+        <Card className="mt-4">
+          <Card.Content className="gap-2">
+            <h1 className="text-2xl font-semibold">{meeting.title}</h1>
+            <p className="text-sm text-muted">{formatDate(meeting.date)}</p>
+            {meeting.participants.length > 0 && (
+              <div className="mt-2">
+                <h2 className="text-sm font-medium">Участники</h2>
+                <ul className="mt-1 flex flex-wrap gap-2" role="list" aria-label="Участники встречи">
+                  {meeting.participants.map((participant) => (
+                    <li
+                      key={participant}
+                      className="rounded-full border border-divider px-3 py-1 text-xs text-muted"
+                    >
+                      {participant}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </Card.Content>
+        </Card>
+      )}
 
+      {/* Rendered unconditionally so files load in parallel with the meeting
+          instead of waiting for the meeting request to resolve. */}
       <section aria-label="Файлы встречи" className="mt-8">
         <h2 className="mb-3 text-lg font-semibold">Файлы</h2>
         <FileUpload

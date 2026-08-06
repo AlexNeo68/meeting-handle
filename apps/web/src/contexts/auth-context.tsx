@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface User {
   id: string;
@@ -145,22 +145,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAvatarVersion((v) => v + 1);
   }, []);
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        isAuthenticated: !!token,
-        avatarVersion,
-        login,
-        logout,
-        updateUser,
-        bumpAvatarVersion,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      user,
+      token,
+      isAuthenticated: !!token,
+      avatarVersion,
+      login,
+      logout,
+      updateUser,
+      bumpAvatarVersion,
+    }),
+    [user, token, avatarVersion, login, logout, updateUser, bumpAvatarVersion],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthContextValue {
