@@ -37,6 +37,12 @@
       "skillPath": "skills/requesting-code-review/SKILL.md",
       "computedHash": "2304d2073c62eab163e04de40fe775e3d87c69c0df40cd4dc953fdb8e3205b81"
     },
+    "security-review": {
+      "source": "getsentry/skills",
+      "sourceType": "github",
+      "skillPath": "skills/security-review/SKILL.md",
+      "computedHash": "ec9792f5fd065e020c48ab5a57707c83435c286c449ba98dfa726d7b1842c868"
+    },
     "tdd-red-green-refactor": {
       "source": "google-labs-code/stitch-sdk",
       "sourceType": "github",
