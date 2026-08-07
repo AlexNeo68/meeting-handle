@@ -44,6 +44,27 @@ describe('translateApiError', () => {
     );
   });
 
+  it('maps transcription server messages to Russian', () => {
+    expect(translateApiError('Transcription not completed')).toBe('Транскрибация ещё не завершена');
+    expect(translateApiError('Transcription disabled')).toBe('Транскрибация отключена');
+    expect(translateApiError('Transcription already in progress')).toBe(
+      'Транскрибация уже выполняется',
+    );
+    expect(translateApiError('Transcription not available')).toBe('Транскрибация недоступна');
+    expect(translateApiError('Interrupted by server restart')).toBe(
+      'Транскрибация прервана перезапуском сервера',
+    );
+    expect(translateApiError('ffmpeg not found')).toBe('ffmpeg не установлен');
+    expect(translateApiError('No audio stream')).toBe('В файле нет аудиодорожки');
+    expect(translateApiError('Model not downloaded')).toBe(
+      'Модель транскрибации не загружена',
+    );
+    expect(translateApiError('whisper-cli binary is not built')).toBe(
+      'Движок транскрибации не собран',
+    );
+    expect(translateApiError('Invalid file path')).toBe('Недопустимый путь к файлу');
+  });
+
   it('uses the provided fallback for unknown messages', () => {
     expect(translateApiError('Some unknown error', 'Не удалось удалить аватар')).toBe(
       'Не удалось удалить аватар',

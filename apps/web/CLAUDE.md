@@ -58,7 +58,7 @@ apps/web/
 │   │   │   ├── avatar-section.tsx  # загрузка/замена/удаление аватара (клиентская валидация 5MB/MIME, DELETE + updateUser)
 │   │   │   ├── general-section.tsx # имя + email → PATCH /api/user/profile → updateUser(); 409 → инлайн-ошибка
 │   │   │   └── password-section.tsx # смена пароля → PATCH /api/user/password; короткий/несовпадение → инлайн
-│   │   ├── file-upload/        # file-upload, file-list, file-item, file-preview, file-icon, index
+│   │   ├── file-upload/        # file-upload, file-list, file-item, file-preview, file-icon, transcription-status, transcript-panel, index
 │   │   └── providers.tsx       # AuthProvider + ToastProvider
 │   ├── contexts/
 │   │   └── auth-context.tsx    # useAuth(): token/user (name/hasAvatar)/login/logout/updateUser/avatarVersion

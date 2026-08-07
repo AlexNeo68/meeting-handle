@@ -1,11 +1,14 @@
 'use client';
 
 import { AlertDialog, Button, toast } from '@heroui/react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { translateApiError } from '@/lib/api-errors';
 import { formatDate } from '@/lib/format-date';
 import { formatFileSize } from '@/lib/format-file-size';
 import { FileTypeIcon } from './file-icon';
 import FilePreview from './file-preview';
+import TranscriptionStatus from './transcription-status';
+import TranscriptPanel from './transcript-panel';
 import type { MeetingFile } from './file-upload';
 
 interface FileItemProps {
@@ -13,13 +16,22 @@ interface FileItemProps {
   meetingId: string;
   token: string;
   onDeleted: (fileId: string) => void;
+  onTranscriptionChange?: () => void;
 }
 
-export default function FileItem({ file, meetingId, token, onDeleted }: FileItemProps) {
+export default function FileItem({
+  file,
+  meetingId,
+  token,
+  onDeleted,
+  onTranscriptionChange,
+}: FileItemProps) {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isTranscriptOpen, setIsTranscriptOpen] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   const handleDownload = async () => {
     setIsDownloading(true);
@@ -70,6 +82,28 @@ export default function FileItem({ file, meetingId, token, onDeleted }: FileItem
       setIsDeleting(false);
     }
   };
+
+  const handleRetry = useCallback(async () => {
+    setIsRetrying(true);
+    try {
+      const res = await fetch(`/api/meetings/${meetingId}/files/${file.id}/transcription/retry`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { message?: string } | null;
+        toast.danger(translateApiError(data?.message ?? 'Не удалось повторить транскрибацию'));
+        return;
+      }
+
+      onTranscriptionChange?.();
+    } catch {
+      toast.danger('Ошибка сети. Попробуйте ещё раз.');
+    } finally {
+      setIsRetrying(false);
+    }
+  }, [file.id, meetingId, token, onTranscriptionChange]);
 
   return (
     <li className="rounded-xl border border-divider bg-background px-4 py-3">
@@ -195,6 +229,51 @@ export default function FileItem({ file, meetingId, token, onDeleted }: FileItem
           </AlertDialog.Root>
         </div>
       </div>
+
+      {file.transcriptionStatus != null && (
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className="min-w-0 flex-1">
+            <TranscriptionStatus
+              status={file.transcriptionStatus}
+              progress={file.transcriptionProgress}
+              error={file.transcriptionError}
+              language={file.transcriptionLanguage}
+            />
+          </div>
+          {file.transcriptionStatus === 'FAILED' && (
+            <Button
+              size="sm"
+              variant="tertiary"
+              className="min-h-11"
+              aria-label="Повторить транскрибацию"
+              isDisabled={isRetrying}
+              isPending={isRetrying}
+              onPress={handleRetry}
+            >
+              Повторить
+            </Button>
+          )}
+          {file.transcriptionStatus === 'COMPLETED' && (
+            <Button
+              size="sm"
+              variant="tertiary"
+              className="min-h-11"
+              aria-label={isTranscriptOpen ? 'Скрыть транскрипт' : 'Показать транскрипт'}
+              aria-expanded={isTranscriptOpen}
+              aria-controls={`transcript-${file.id}`}
+              onPress={() => setIsTranscriptOpen((open) => !open)}
+            >
+              {isTranscriptOpen ? 'Скрыть' : 'Показать транскрипт'}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {isTranscriptOpen && (
+        <div id={`transcript-${file.id}`} className="mt-2">
+          <TranscriptPanel fileId={file.id} meetingId={meetingId} token={token} />
+        </div>
+      )}
 
       {isPreviewOpen && (
         <div id={`preview-${file.id}`}>

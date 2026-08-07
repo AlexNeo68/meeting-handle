@@ -1,7 +1,7 @@
 'use client';
 
 import { Button, Card, Skeleton } from '@heroui/react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import FileItem from './file-item';
 import type { MeetingFile } from './file-upload';
@@ -12,39 +12,77 @@ interface FileListProps {
   onRequestUpload?: () => void;
 }
 
+const POLL_INTERVAL_MS = 3000;
+
 export default function FileList({ meetingId, refreshToken = 0, onRequestUpload }: FileListProps) {
   const { token } = useAuth();
   const [files, setFiles] = useState<MeetingFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isFetchingRef = useRef(false);
+
+  const fetchFiles = useCallback(async () => {
+    const res = await fetch(`/api/meetings/${meetingId}/files`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    const data = (await res.json()) as { files?: MeetingFile[] } | MeetingFile[];
+
+    if (!res.ok) {
+      const message =
+        data && typeof data === 'object' && 'message' in data ? String(data.message) : null;
+      throw new Error(message || 'Ошибка загрузки файлов');
+    }
+
+    return Array.isArray(data) ? data : Array.isArray(data?.files) ? data.files : [];
+  }, [meetingId, token]);
 
   const loadFiles = useCallback(async () => {
     try {
-      const res = await fetch(`/api/meetings/${meetingId}/files`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = (await res.json()) as { files?: MeetingFile[] } | MeetingFile[];
-
-      if (!res.ok) {
-        const message =
-          data && typeof data === 'object' && 'message' in data ? String(data.message) : null;
-        throw new Error(message || 'Ошибка загрузки файлов');
-      }
-
-      setFiles(Array.isArray(data) ? data : Array.isArray(data?.files) ? data.files : []);
+      const list = await fetchFiles();
+      setFiles(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Что-то пошло не так');
     } finally {
       setIsLoading(false);
     }
-  }, [meetingId, token]);
+  }, [fetchFiles]);
 
   useEffect(() => {
     setIsLoading(true);
     setError(null);
     loadFiles();
   }, [loadFiles, refreshToken]);
+
+  const hasActiveTranscription = useMemo(
+    () =>
+      files.some(
+        (file) =>
+          file.transcriptionStatus === 'PROCESSING' || file.transcriptionStatus === 'PENDING',
+      ),
+    [files],
+  );
+
+  useEffect(() => {
+    if (!hasActiveTranscription) {
+      return;
+    }
+
+    const intervalId = window.setInterval(() => {
+      if (isFetchingRef.current) {
+        return;
+      }
+      isFetchingRef.current = true;
+      fetchFiles()
+        .then(setFiles)
+        .catch(() => undefined)
+        .finally(() => {
+          isFetchingRef.current = false;
+        });
+    }, POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [hasActiveTranscription, fetchFiles]);
 
   const handleDeleted = useCallback((fileId: string) => {
     setFiles((prev) => prev.filter((file) => file.id !== fileId));
@@ -116,6 +154,7 @@ export default function FileList({ meetingId, refreshToken = 0, onRequestUpload 
           meetingId={meetingId}
           token={token ?? ''}
           onDeleted={handleDeleted}
+          onTranscriptionChange={loadFiles}
         />
       ))}
     </ul>

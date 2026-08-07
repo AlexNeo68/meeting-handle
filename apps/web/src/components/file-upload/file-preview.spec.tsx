@@ -19,6 +19,10 @@ function makeFile(
   mimeType: string;
   size: number;
   createdAt: string;
+  transcriptionStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | null;
+  transcriptionProgress: number | null;
+  transcriptionError: string | null;
+  transcriptionLanguage: string | null;
 } {
   return {
     id: 'file-1',
@@ -26,6 +30,10 @@ function makeFile(
     mimeType,
     size: 1024,
     createdAt: '2026-07-30T09:00:00.000Z',
+    transcriptionStatus: null,
+    transcriptionProgress: null,
+    transcriptionError: null,
+    transcriptionLanguage: null,
   };
 }
 

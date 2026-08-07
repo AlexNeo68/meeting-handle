@@ -26,6 +26,16 @@ const API_ERROR_TRANSLATIONS: Record<string, string> = {
   'Insufficient storage': 'Недостаточно места на сервере',
   'Too Many Requests': 'Слишком много попыток. Попробуйте позже.',
   'Internal server error': 'Внутренняя ошибка сервера. Попробуйте ещё раз.',
+  'Transcription not completed': 'Транскрибация ещё не завершена',
+  'Transcription disabled': 'Транскрибация отключена',
+  'Transcription already in progress': 'Транскрибация уже выполняется',
+  'Transcription not available': 'Транскрибация недоступна',
+  'Interrupted by server restart': 'Транскрибация прервана перезапуском сервера',
+  'ffmpeg not found': 'ffmpeg не установлен',
+  'No audio stream': 'В файле нет аудиодорожки',
+  'Model not downloaded': 'Модель транскрибации не загружена',
+  'whisper-cli binary is not built': 'Движок транскрибации не собран',
+  'Invalid file path': 'Недопустимый путь к файлу',
 };
 
 export function translateApiError(message: ApiErrorInput, fallback = FALLBACK_API_ERROR): string {

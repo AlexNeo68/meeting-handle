@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import FileList from './file-list';
 
@@ -61,6 +61,7 @@ function renderList(overrides: Partial<{ fetchImpl: typeof fetch; files: typeof 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('FileList', () => {
@@ -186,5 +187,104 @@ describe('FileList', () => {
       expect(screen.queryByText('заметки.pdf')).not.toBeInTheDocument();
     });
     expect(screen.getByText('запись.mp4')).toBeInTheDocument();
+  });
+
+  it('polls the list every 3 seconds while a file is processing and stops once completed', async () => {
+    const processingFile = {
+      id: 'file-3',
+      originalName: 'запись.mp4',
+      mimeType: 'video/mp4',
+      size: 1024,
+      createdAt: '2026-07-29T10:00:00.000Z',
+      transcriptionStatus: 'PROCESSING',
+      transcriptionProgress: 40,
+      transcriptionError: null,
+      transcriptionLanguage: null,
+    };
+    const completedFile = {
+      ...processingFile,
+      transcriptionStatus: 'COMPLETED',
+      transcriptionProgress: 100,
+    };
+
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ files: [processingFile] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ files: [completedFile] }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ files: [completedFile] }) });
+
+    mockUseAuth.mockReturnValue({
+      token: 'jwt-token',
+      user: { id: 'user-1', email: 'test@example.com' },
+      isAuthenticated: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<FileList meetingId="meeting-1" />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('запись.mp4')).toBeInTheDocument();
+    expect(screen.getByText('Транскрибация… 40%')).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(/Готово/)).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not poll when no file is being transcribed', async () => {
+    const completedFile = {
+      id: 'file-4',
+      originalName: 'заметки.pdf',
+      mimeType: 'application/pdf',
+      size: 2048,
+      createdAt: '2026-07-30T09:00:00.000Z',
+      transcriptionStatus: 'COMPLETED',
+      transcriptionProgress: 100,
+      transcriptionError: null,
+      transcriptionLanguage: 'ru',
+    };
+
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ files: [completedFile] }) });
+
+    mockUseAuth.mockReturnValue({
+      token: 'jwt-token',
+      user: { id: 'user-1', email: 'test@example.com' },
+      isAuthenticated: true,
+      login: vi.fn(),
+      logout: vi.fn(),
+    });
+    vi.useFakeTimers();
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<FileList meetingId="meeting-1" />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Готово · ru')).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000);
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

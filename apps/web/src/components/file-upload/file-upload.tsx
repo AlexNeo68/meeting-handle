@@ -14,6 +14,10 @@ export interface MeetingFile {
   mimeType: string;
   size: number;
   createdAt: string;
+  transcriptionStatus: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | null;
+  transcriptionProgress: number | null;
+  transcriptionError: string | null;
+  transcriptionLanguage: string | null;
 }
 
 interface FileUploadProps {
