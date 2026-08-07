@@ -22,6 +22,7 @@ export default defineConfig({
       env: {
         ...process.env,
         THROTTLE_LIMIT: '100000',
+        WHISPER_AUTO_DOWNLOAD: 'false',
       },
     },
     {
