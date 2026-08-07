@@ -6,6 +6,7 @@ import { UserModule } from './user/user.module';
 import { MeetingsModule } from './meetings/meeting.module';
 import { FilesModule } from './files/files.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { TranscriptionModule } from './transcription/transcription.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 @Module({
@@ -21,6 +22,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
     MeetingsModule,
     FilesModule,
     PrismaModule,
+    TranscriptionModule,
   ],
   providers: [
     {
