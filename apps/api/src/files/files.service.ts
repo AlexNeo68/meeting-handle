@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Inject,
   Injectable,
   Logger,
@@ -9,10 +8,11 @@ import {
 } from '@nestjs/common';
 import { createReadStream } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
-import { basename, join, resolve, sep } from 'node:path';
+import { basename, join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service';
-import { isAllowedMime, MIME_TYPE_DETECTOR, UPLOAD_DIR } from './files.constants';
+import { isAllowedMime, MIME_TYPE_DETECTOR } from './files.constants';
 import { MimeTypeDetector } from './mime-type-detector';
+import { StoragePathService } from './storage-path.service';
 
 @Injectable()
 export class FilesService {
@@ -20,7 +20,7 @@ export class FilesService {
 
   constructor(
     private readonly prisma: PrismaService,
-    @Inject(UPLOAD_DIR) private readonly uploadDir: string,
+    private readonly storagePath: StoragePathService,
     @Inject(MIME_TYPE_DETECTOR) private readonly detector: MimeTypeDetector,
   ) {}
 
@@ -97,7 +97,7 @@ export class FilesService {
   }
 
   async download(file: { originalName: string; mimeType: string; storagePath: string }) {
-    const absPath = this.resolveStoredPath(file.storagePath);
+    const absPath = this.storagePath.resolve(file.storagePath);
 
     try {
       await stat(absPath);
@@ -121,7 +121,7 @@ export class FilesService {
     res: import('express').Response,
     next: import('express').NextFunction,
   ) {
-    const absPath = this.resolveStoredPath(file.storagePath);
+    const absPath = this.storagePath.resolve(file.storagePath);
     res.setHeader(
       'Content-Disposition',
       `inline; filename*=UTF-8''${encodeURIComponent(file.originalName)}`,
@@ -137,7 +137,7 @@ export class FilesService {
 
   async remove(fileId: string, meetingId: string, userId: string) {
     const file = await this.findOwned(fileId, meetingId, userId);
-    const absPath = this.resolveStoredPath(file.storagePath);
+    const absPath = this.storagePath.resolve(file.storagePath);
 
     try {
       await unlink(absPath);
@@ -164,14 +164,5 @@ export class FilesService {
     if (!meeting) {
       throw new NotFoundException(`Meeting with id "${meetingId}" not found`);
     }
-  }
-
-  private resolveStoredPath(storagePath: string): string {
-    const base = resolve(this.uploadDir);
-    const absPath = resolve(base, storagePath);
-    if (!absPath.startsWith(base + sep)) {
-      throw new ForbiddenException('Invalid file path');
-    }
-    return absPath;
   }
 }

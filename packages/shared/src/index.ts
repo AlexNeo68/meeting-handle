@@ -48,3 +48,8 @@ export function getFileKind(mime: string): FileKind {
   if (mime === MSWORD_MIME_TYPE || mime.startsWith(OPENXML_DOC_MIME_PREFIX)) return 'doc';
   return 'other';
 }
+
+export function isTranscribableMime(mime: string): boolean {
+  const kind = getFileKind(mime);
+  return kind === 'audio' || kind === 'video';
+}

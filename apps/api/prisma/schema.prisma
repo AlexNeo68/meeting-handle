@@ -7,6 +7,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TranscriptionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id                String        @id @default(uuid())
   email             String        @unique
@@ -47,6 +54,16 @@ model MeetingFile {
   meeting      Meeting  @relation(fields: [meetingId], references: [id], onDelete: Cascade)
   user         User     @relation(fields: [userId], references: [id])
 
+  // Transcription. transcriptionStatus = null means the file is not
+  // transcribed (non audio/video) or transcription not started (backward compat).
+  transcriptionStatus   TranscriptionStatus?
+  transcriptionProgress Int?
+  transcriptionError    String?
+  transcript            String?
+  transcriptionLanguage String?
+  transcribedAt         DateTime?
+
   @@index([userId, meetingId])
   @@index([meetingId])
+  @@index([transcriptionStatus])
 }

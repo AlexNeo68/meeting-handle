@@ -5,6 +5,7 @@ import {
   ALLOWED_MIME_PREFIXES,
   getFileKind,
   isAllowedMime,
+  isTranscribableMime,
   MAX_FILE_SIZE,
   MAX_AVATAR_SIZE,
   ALLOWED_AVATAR_MIME_TYPES,
@@ -73,6 +74,25 @@ describe('getFileKind', () => {
 
   it('prefers the audio prefix over generic classification', () => {
     expect(getFileKind('audio/vnd.openxmlformats-officedocument')).toBe('audio');
+  });
+});
+
+describe('isTranscribableMime', () => {
+  it('accepts audio mime types', () => {
+    expect(isTranscribableMime('audio/mpeg')).toBe(true);
+    expect(isTranscribableMime('audio/wav')).toBe(true);
+  });
+
+  it('accepts video mime types', () => {
+    expect(isTranscribableMime('video/mp4')).toBe(true);
+    expect(isTranscribableMime('video/webm')).toBe(true);
+  });
+
+  it('rejects pdf, doc, other and empty mime types', () => {
+    expect(isTranscribableMime('application/pdf')).toBe(false);
+    expect(isTranscribableMime('application/msword')).toBe(false);
+    expect(isTranscribableMime('application/octet-stream')).toBe(false);
+    expect(isTranscribableMime('')).toBe(false);
   });
 });
 
