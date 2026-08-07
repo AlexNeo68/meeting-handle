@@ -1,7 +1,8 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MulterModule } from '@nestjs/platform-express';
 import { join, resolve } from 'node:path';
 import { AuthModule } from '../auth/auth.module';
+import { TranscriptionModule } from '../transcription/transcription.module';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
 import { FileTypeMimeDetector } from './mime-type-detector';
@@ -12,6 +13,7 @@ import { multerDiskOptions } from './upload.options';
 @Module({
   imports: [
     AuthModule,
+    forwardRef(() => TranscriptionModule),
     MulterModule.registerAsync({
       useFactory: () =>
         multerDiskOptions(resolve(process.env.UPLOAD_DIR ?? join(process.cwd(), 'uploads'))),
@@ -30,5 +32,6 @@ import { multerDiskOptions } from './upload.options';
       useClass: FileTypeMimeDetector,
     },
   ],
+  exports: [FilesService],
 })
 export class FilesModule {}

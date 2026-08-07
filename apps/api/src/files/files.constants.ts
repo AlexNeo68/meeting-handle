@@ -1,4 +1,4 @@
-export { MAX_FILE_SIZE, isAllowedMime } from '@meeting-ai/shared';
+export { isAllowedMime, isTranscribableMime, MAX_FILE_SIZE } from '@meeting-ai/shared';
 
 export const UPLOAD_DIR = 'UPLOAD_DIR';
 

@@ -9,8 +9,10 @@ import {
 import { createReadStream } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
 import { basename, join } from 'node:path';
+import { TranscriptionStatus } from '../../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
-import { isAllowedMime, MIME_TYPE_DETECTOR } from './files.constants';
+import { TranscriptionService } from '../transcription/transcription.service';
+import { isAllowedMime, isTranscribableMime, MIME_TYPE_DETECTOR } from './files.constants';
 import { MimeTypeDetector } from './mime-type-detector';
 import { StoragePathService } from './storage-path.service';
 
@@ -22,6 +24,7 @@ export class FilesService {
     private readonly prisma: PrismaService,
     private readonly storagePath: StoragePathService,
     @Inject(MIME_TYPE_DETECTOR) private readonly detector: MimeTypeDetector,
+    private readonly transcriptionService: TranscriptionService,
   ) {}
 
   async upload(file: Express.Multer.File, meetingId: string, userId: string) {
@@ -41,6 +44,8 @@ export class FilesService {
         throw new BadRequestException('File content does not match allowed types');
       }
 
+      const isTranscribable = isTranscribableMime(detected);
+
       const record = await this.prisma.meetingFile.create({
         data: {
           storagePath: join(userId, meetingId, basename(file.path)),
@@ -49,8 +54,13 @@ export class FilesService {
           size: file.size,
           meetingId,
           userId,
+          ...(isTranscribable ? { transcriptionStatus: TranscriptionStatus.PENDING } : {}),
         },
       });
+
+      if (isTranscribable) {
+        this.transcriptionService.enqueue(record.id);
+      }
 
       return {
         id: record.id,
@@ -58,6 +68,8 @@ export class FilesService {
         mimeType: record.mimeType,
         size: record.size,
         createdAt: record.createdAt,
+        transcriptionStatus: record.transcriptionStatus ?? null,
+        transcriptionProgress: record.transcriptionProgress ?? null,
       };
     } catch (err) {
       await unlink(file.path).catch(() => undefined);
@@ -77,6 +89,10 @@ export class FilesService {
         mimeType: true,
         size: true,
         createdAt: true,
+        transcriptionStatus: true,
+        transcriptionProgress: true,
+        transcriptionError: true,
+        transcriptionLanguage: true,
       },
       take: 50,
     });
