@@ -59,15 +59,16 @@ meeting-ai/
 │   │       ├── auth/        # CQRS (register/login)
 │   │       ├── user/        # /user/profile, /user/password (rate limit user+IP), avatar
 │   │       ├── meetings/    # CRUD встреч
-│   │       ├── files/       # загрузка/список/скачивание/просмотр/удаление файлов
+│   │       ├── files/       # загрузка/список/скачивание/просмотр/удаление файлов (upload-хук транскрибации: PENDING + enqueue)
+│   │       ├── transcription/  # локальная транскрибация whisper.cpp: WhisperCppEngine (низкоуровневые API nodejs-whisper, `-pp -l auto -otxt -ng`), progress.parser, очередь с boot-recovery (PROCESSING→FAILED), гейт TRANSCRIPTION_ENABLED, GET transcript / POST transcription/retry
 │   │       └── common/      # decorators, filters, utils (в т.ч. единый маппинг профиля toProfile)
 │   └── web/          # Next.js фронтенд (детали — в apps/web/CLAUDE.md)
 │       ├── src/
 │       │   ├── app/         # /, /login, /signup, (authenticated) (создание + список встреч), (authenticated)/meetings/[id], (authenticated)/profile
-│       │   ├── components/  # create-meeting-form, header (user block → /profile), user-avatar, profile (avatar/general/password-section), file-upload UI (upload/list/item/preview/icon), providers (Toast)
+│   │       ├── components/  # create-meeting-form, header (user block → /profile), user-avatar, profile (avatar/general/password-section), file-upload UI (upload/list/item/preview/icon + transcription-status/transcript-panel), providers (Toast)
 │       │   ├── contexts/    # auth-context (useAuth)
 │       │       └── lib/         # api-errors.ts (перевод ошибок API на русский), format-date.ts, format-file-size.ts (общие форматтеры)
-│       └── e2e/             # Playwright e2e-тесты (file-upload.spec.ts)
+│       └── e2e/             # Playwright e2e-тесты (avatar, file-upload, transcription)
 ├── packages/
 │   └── shared/              # @meeting-ai/shared: общие константы (лимиты, MIME-типы), getFileKind, unit-тесты (Vitest)
 ├── .claude/

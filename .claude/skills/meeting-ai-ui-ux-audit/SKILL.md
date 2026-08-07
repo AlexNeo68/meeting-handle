@@ -338,15 +338,18 @@ function validateTerms(isSelected: boolean): string | null {
 | `apps/web/src/app/signup/layout.tsx` | Metadata для signup |
 | `apps/web/src/app/(authenticated)/page.tsx` | Список встреч (карточки-ссылки на `/meetings/[id]`) |
 | `apps/web/src/app/(authenticated)/meetings/[id]/page.tsx` | Страница встречи: инфо, участники, секция файлов |
-| `apps/web/src/components/file-upload/file-upload.tsx` | Dropzone + XHR-загрузка с прогрессом, валидация 100MB/MIME (константы из `@meeting-ai/shared`) |
-| `apps/web/src/components/file-upload/file-list.tsx` | Список файлов: skeleton, empty state, error, refreshToken |
-| `apps/web/src/components/file-upload/file-item.tsx` | Строка файла: скачивание (blob), удаление (AlertDialog), inline preview |
+| `apps/web/src/components/file-upload/file-upload.tsx` | Dropzone + XHR-загрузка с прогрессом, валидация 100MB/MIME (константы из `@meeting-ai/shared`); тип `MeetingFile` содержит transcription-поля |
+| `apps/web/src/components/file-upload/file-list.tsx` | Список файлов: skeleton, empty state, error, refreshToken; polling 3s (`setInterval`, race-guard) пока есть PENDING/PROCESSING |
+| `apps/web/src/components/file-upload/file-item.tsx` | Строка файла: скачивание (blob), удаление (AlertDialog), inline preview; строка статуса транскрибации, «Повторить» (FAILED), «Показать/Скрыть транскрипт» (COMPLETED, `aria-expanded`) |
+| `apps/web/src/components/file-upload/transcription-status.tsx` | `TranscriptionStatus`: null→ничего; PENDING→бейдж «В очереди» (`role="status"`); PROCESSING→HeroUI `ProgressBar` + «Транскрибация… N%» (`isIndeterminate` при null); FAILED→`translateApiError` красным `role="alert"`; COMPLETED→«Готово · RU» (Chip success) |
+| `apps/web/src/components/file-upload/transcript-panel.tsx` | Панель транскрипта: `GET /transcript`, Spinner-загрузка, ошибка `role="alert"`, `whitespace-pre-wrap`, пустой текст → «Речь не распознана…» |
 | `apps/web/src/components/file-upload/file-preview.tsx` | Audio/video inline player (blob URL + revoke) / документ: иконка+имя (без blob-фетча), error state |
 | `apps/web/src/components/file-upload/file-icon.tsx` | `FileTypeIcon` (SVG по `FileKind` из `@meeting-ai/shared`) + `fileTypeLabel`, проп `hideLabel` |
 | `apps/web/src/lib/format-file-size.ts` | Общий `formatFileSize` (B/KB/MB/GB/TB) |
 | `apps/web/src/lib/format-date.ts` | Общий `formatDate` (используется на страницах встреч и списка) |
 | `playwright.config.ts` | E2E-конфиг (root): 2 webServer (api :3001, web :3000), `reuseExistingServer` |
 | `apps/web/e2e/file-upload.spec.ts` | Playwright e2e: upload→preview→download→delete + клиентская валидация |
+| `apps/web/e2e/transcription.spec.ts` | Playwright e2e: флоу транскрибации (стаб через `page.route`) — polling→COMPLETED→показать транскрипт; FAILED→«Повторить»→PENDING. Логин прогревает `/` полным `goto` (иначе флакает холодный client-nav compile Next dev) |
 | `apps/web/src/components/user-avatar.tsx` | Круглый аватар: blob fetch `GET /api/user/profile/avatar` с JWT (keyed на `avatarVersion`) или инициалы (имя → первые буквы, иначе первая буква email), `<img alt={name}>` |
 | `apps/web/src/components/header.tsx` | Блок пользователя в шапке: `user-avatar` (small) + имя/email, клик → `/profile` (`useRouter().push`), `min-h-11` + `aria-label`, кнопка «Выйти» |
 | `apps/web/src/components/profile/avatar-section.tsx` | Загрузка/замена аватара: клиентская валидация `MAX_AVATAR_SIZE`/`ALLOWED_AVATAR_MIME_TYPES` из `@meeting-ai/shared`, инлайн-ошибка, updateUser + bumpAvatarVersion |
@@ -370,6 +373,7 @@ function validateTerms(isSelected: boolean): string | null {
 | 2026-07-31 | `file-upload/*` (code review) | RU-aria-labels с миксами языков, нет `aria-live`, touch targets < 44px, дубли `formatDate` и MIME-констант | RU-aria-labels с именем файла, `aria-live="polite"` на ошибках, `min-h-11` на интерактиве, общий `format-date.ts`, `@meeting-ai/shared` |
 | 2026-07-31 | `file-upload/*` (P2 polish, issue #6) | preview только для медиа, дубли `formatBytes`/иконок, нет индикации «обработки» после загрузки | `file-preview.tsx` для всех типов, `file-icon.tsx` + `format-file-size.ts`, `isIndeterminate` прогресс |
 | 2026-07-31 | `file-upload/*` (code review #6 fixes) | дублирование MIME-констант в `file-icon.tsx`, кириллические единицы/`.0` в размерах, blob-фетч для документов, неоднозначный progress | `getFileKind`/`FileKind` в `@meeting-ai/shared`, `formatFileSize` → B/KB/MB/GB/TB, ранний return в preview для не-media, `value={undefined}` в indeterminate, e2e (backend+frontend) |
+| 2026-08-07 | `file-upload/*` (транскрибация T7/T8) | строка статуса, retry, панель транскрипта — новые компоненты; polling в списке | `transcription-status.tsx`/`transcript-panel.tsx` (aria: `role="status"`/`progressbar`/`alert`, `aria-expanded`), кнопки `min-h-11`, polling 3s с race-guard, переводы в `api-errors.ts` |
 | 2026-08-02 | `profile/page.tsx`, `components/profile/*` (T7) | — | паттерны 23–26: 3 stacked Cards + skeleton, инлайн-ошибка 409 с `aria-describedby`, cross-field валидация пароля, empty state «пустое имя → email» |
 
 ### Все исправления (signup/page.tsx)
