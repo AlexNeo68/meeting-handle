@@ -8,7 +8,7 @@ import type { Logger as WhisperLogger } from 'nodejs-whisper/dist/types';
 import { convertToWavType } from 'nodejs-whisper/dist/utils';
 import { executeCppCommand } from 'nodejs-whisper/dist/whisper';
 import { parseLanguage, parseProgress } from './progress.parser';
-import { TRANSCRIPTION_ERRORS } from './transcription.constants';
+import { TRANSCRIPTION_ERRORS, whisperAutoDownloadEnabled, whisperModelDir, whisperModelName } from './transcription.constants';
 import type { WhisperEngine } from './transcription.constants';
 
 interface TranscribeCallbacks {
@@ -26,16 +26,15 @@ function stripTimestamps(text: string): string {
 export class WhisperCppEngine implements WhisperEngine {
   private readonly logger = new Logger(WhisperCppEngine.name);
 
+  async warmup(): Promise<void> {
+    await this.ensureReady(this.createPassiveLogger());
+  }
+
   async transcribe(
     absPath: string,
     opts: { onProgress: (pct: number) => void; onLanguage?: (lang: string) => void; signal?: AbortSignal },
   ): Promise<{ transcript: string; language?: string }> {
     const { onProgress, onLanguage, signal } = opts;
-    const modelName = process.env.WHISPER_MODEL_NAME ?? 'base';
-    const modelRootPath = process.env.WHISPER_MODEL_DIR;
-    const modelFile = (MODEL_OBJECT as Record<string, string>)[modelName] ?? MODEL_OBJECT.base;
-    const modelPath = modelRootPath ? resolve(modelRootPath, modelFile) : join(WHISPER_CPP_PATH, 'models', modelFile);
-
     const parseLogger = this.createParseLogger({ onProgress, onLanguage });
 
     let wavPath: string | undefined;
@@ -43,28 +42,7 @@ export class WhisperCppEngine implements WhisperEngine {
     try {
       this.assertNotAborted(signal);
 
-      if (!existsSync(modelPath)) {
-        if (process.env.WHISPER_AUTO_DOWNLOAD !== 'false') {
-          await autoDownloadModel(parseLogger.logger, modelName, false, modelRootPath);
-        }
-        this.assertNotAborted(signal);
-        if (!existsSync(modelPath)) {
-          throw new Error(TRANSCRIPTION_ERRORS.MODEL_NOT_DOWNLOADED);
-        }
-      }
-
-      let exePath = this.getWhisperExecutablePath();
-      if (!exePath) {
-        try {
-          await executeCppCommand('cmake --build build --config Release', parseLogger.logger, false);
-        } catch {
-          this.logger.warn('whisper-cli binary could not be built');
-        }
-        exePath = this.getWhisperExecutablePath();
-        if (!exePath) {
-          throw new Error('whisper-cli binary is not built');
-        }
-      }
+      const { modelPath, exePath } = await this.ensureReady(parseLogger.logger);
 
       this.assertNotAborted(signal);
       wavPath = await convertToWavType(absPath, parseLogger.logger);
@@ -93,6 +71,47 @@ export class WhisperCppEngine implements WhisperEngine {
         unlink(wavPath).catch(() => undefined);
       }
     }
+  }
+
+  private async ensureReady(logger: WhisperLogger): Promise<{ modelPath: string; exePath: string }> {
+    const modelName = whisperModelName();
+    const modelRootPath = whisperModelDir();
+    const modelFile = (MODEL_OBJECT as Record<string, string>)[modelName] ?? MODEL_OBJECT.base;
+    const modelPath = modelRootPath
+      ? resolve(modelRootPath, modelFile)
+      : join(WHISPER_CPP_PATH, 'models', modelFile);
+
+    if (!existsSync(modelPath)) {
+      if (whisperAutoDownloadEnabled()) {
+        await autoDownloadModel(logger, modelName, false, modelRootPath);
+      }
+      if (!existsSync(modelPath)) {
+        throw new Error(TRANSCRIPTION_ERRORS.MODEL_NOT_DOWNLOADED);
+      }
+    }
+
+    let exePath = this.getWhisperExecutablePath();
+    if (!exePath) {
+      try {
+        await executeCppCommand('cmake --build build --config Release', logger, false);
+      } catch {
+        this.logger.warn('whisper-cli binary could not be built');
+      }
+      exePath = this.getWhisperExecutablePath();
+      if (!exePath) {
+        throw new Error('whisper-cli binary is not built');
+      }
+    }
+
+    return { modelPath, exePath };
+  }
+
+  private createPassiveLogger(): WhisperLogger {
+    return {
+      log: (msg: unknown) => this.logger.log(String(msg)),
+      error: (msg: unknown) => this.logger.error(String(msg)),
+      debug: (msg: unknown) => this.logger.debug(String(msg)),
+    };
   }
 
   private createParseLogger(callbacks: TranscribeCallbacks): {

@@ -6,6 +6,9 @@ import { ThrottlerStorage } from '@nestjs/throttler';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { WHISPER_ENGINE } from '../src/transcription/transcription.constants';
+
+const engineStub = { transcribe: jest.fn(), warmup: jest.fn().mockResolvedValue(undefined) };
 
 describe('Password change (e2e)', () => {
   let app: NestExpressApplication;
@@ -16,7 +19,10 @@ describe('Password change (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(WHISPER_ENGINE)
+      .useValue(engineStub)
+      .compile();
 
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     app.set('trust proxy', 1);
@@ -189,7 +195,10 @@ describe('Password change — rate limit with trust proxy disabled (default)', (
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(WHISPER_ENGINE)
+      .useValue(engineStub)
+      .compile();
 
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));

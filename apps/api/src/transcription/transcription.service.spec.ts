@@ -4,6 +4,7 @@ import { TranscriptionStatus } from '../../generated/prisma/enums';
 import { StoragePathService } from '../files/storage-path.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { TranscriptionService } from './transcription.service';
+import { TRANSCRIPTION_ERRORS } from './transcription.constants';
 import type { WhisperEngine } from './transcription.constants';
 
 const deferred = () => {
@@ -15,11 +16,12 @@ const deferred = () => {
 };
 
 describe('TranscriptionService', () => {
-  const engineMock = { transcribe: jest.fn() };
+  const engineMock = { transcribe: jest.fn(), warmup: jest.fn() };
   const prismaMock = {
     meetingFile: {
       findUnique: jest.fn(),
       update: jest.fn(),
+      updateMany: jest.fn(),
     },
   };
   const storageMock = { resolve: jest.fn((p: string) => p) };
@@ -60,8 +62,10 @@ describe('TranscriptionService', () => {
       args.select ? Promise.resolve({ id: args.where.id }) : Promise.resolve(fileRecord(args.where.id)),
     );
     prismaMock.meetingFile.update.mockResolvedValue({ id: 'file-1' });
+    prismaMock.meetingFile.updateMany.mockResolvedValue({ count: 0 });
     storageMock.resolve.mockImplementation((p: string) => p);
     engineMock.transcribe.mockResolvedValue({ transcript: '', language: undefined });
+    engineMock.warmup.mockResolvedValue(undefined);
     service = createService();
   });
 
@@ -259,5 +263,42 @@ describe('TranscriptionService', () => {
     await flush();
 
     expect(prismaMock.meetingFile.update).toHaveBeenCalled();
+  });
+
+  describe('onModuleInit', () => {
+    it('recovers interrupted PROCESSING transcriptions', async () => {
+      prismaMock.meetingFile.updateMany.mockResolvedValue({ count: 2 });
+
+      await service.onModuleInit();
+
+      expect(prismaMock.meetingFile.updateMany).toHaveBeenCalledWith({
+        where: { transcriptionStatus: TranscriptionStatus.PROCESSING },
+        data: {
+          transcriptionStatus: TranscriptionStatus.FAILED,
+          transcriptionError: TRANSCRIPTION_ERRORS.INTERRUPTED_BY_RESTART,
+        },
+      });
+    });
+
+    it('warms up the engine when enabled', async () => {
+      await service.onModuleInit();
+
+      expect(engineMock.warmup).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not warm up the engine when disabled', async () => {
+      process.env.TRANSCRIPTION_ENABLED = 'false';
+      service = createService();
+
+      await service.onModuleInit();
+
+      expect(engineMock.warmup).not.toHaveBeenCalled();
+    });
+
+    it('does not throw when the engine warm-up fails', async () => {
+      engineMock.warmup.mockRejectedValue(new Error('cmake missing'));
+
+      await expect(service.onModuleInit()).resolves.toBeUndefined();
+    });
   });
 });

@@ -44,7 +44,7 @@ export class FilesService {
         throw new BadRequestException('File content does not match allowed types');
       }
 
-      const isTranscribable = isTranscribableMime(detected);
+      const isTranscribable = isTranscribableMime(detected) && this.transcriptionService.enabled;
 
       const record = await this.prisma.meetingFile.create({
         data: {

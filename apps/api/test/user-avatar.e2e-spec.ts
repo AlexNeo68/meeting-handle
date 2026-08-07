@@ -10,6 +10,7 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../src/files/files.constants';
 import { avatarDiskOptions } from '../src/user/avatar.options';
+import { WHISPER_ENGINE } from '../src/transcription/transcription.constants';
 
 describe('User Avatar (e2e)', () => {
   let app: INestApplication;
@@ -20,6 +21,8 @@ describe('User Avatar (e2e)', () => {
   const detectorMock = {
     detect: jest.fn().mockResolvedValue('image/jpeg'),
   };
+
+  const engineStub = { transcribe: jest.fn(), warmup: jest.fn().mockResolvedValue(undefined) };
 
   beforeAll(async () => {
     tmpDir = mkdtempSync(join(tmpdir(), 'avatars-'));
@@ -33,6 +36,8 @@ describe('User Avatar (e2e)', () => {
       .useValue(tmpDir)
       .overrideProvider(MIME_TYPE_DETECTOR)
       .useValue(detectorMock)
+      .overrideProvider(WHISPER_ENGINE)
+      .useValue(engineStub)
       .compile();
 
     app = moduleFixture.createNestApplication();

@@ -30,6 +30,10 @@ export class TranscriptionController {
     @Param('fileId', ParseUUIDPipe) fileId: string,
     @UserId() userId: string,
   ) {
+    if (!this.transcriptionService.enabled) {
+      throw new ConflictException('Transcription disabled');
+    }
+
     const file = await this.filesService.findOwned(fileId, meetingId, userId);
 
     if (file.transcriptionStatus !== TranscriptionStatus.COMPLETED) {
@@ -50,6 +54,10 @@ export class TranscriptionController {
     @Param('fileId', ParseUUIDPipe) fileId: string,
     @UserId() userId: string,
   ) {
+    if (!this.transcriptionService.enabled) {
+      throw new ConflictException('Transcription disabled');
+    }
+
     const file = await this.filesService.findOwned(fileId, meetingId, userId);
 
     if (file.transcriptionStatus === TranscriptionStatus.FAILED) {

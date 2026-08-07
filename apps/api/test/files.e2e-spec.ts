@@ -10,6 +10,7 @@ import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 import { MIME_TYPE_DETECTOR, UPLOAD_DIR } from '../src/files/files.constants';
 import { multerDiskOptions } from '../src/files/upload.options';
+import { WHISPER_ENGINE } from '../src/transcription/transcription.constants';
 
 describe('Files (e2e)', () => {
   let app: INestApplication;
@@ -23,6 +24,8 @@ describe('Files (e2e)', () => {
     detect: jest.fn().mockResolvedValue('application/pdf'),
   };
 
+  const engineStub = { transcribe: jest.fn(), warmup: jest.fn().mockResolvedValue(undefined) };
+
   beforeAll(async () => {
     tmpDir = mkdtempSync(join(tmpdir(), 'uploads-'));
 
@@ -35,6 +38,8 @@ describe('Files (e2e)', () => {
       .useValue(tmpDir)
       .overrideProvider(MIME_TYPE_DETECTOR)
       .useValue(detectorMock)
+      .overrideProvider(WHISPER_ENGINE)
+      .useValue(engineStub)
       .compile();
 
     app = moduleFixture.createNestApplication();

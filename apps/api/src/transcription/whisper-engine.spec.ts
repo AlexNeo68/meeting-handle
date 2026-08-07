@@ -160,6 +160,47 @@ describe('WhisperCppEngine', () => {
     );
   });
 
+  it('warms up by downloading the model and building the binary without transcribing', async () => {
+    let modelExists = false;
+    let exeExists = false;
+    mockExistsSync.mockImplementation((p: string) => {
+      if (p.endsWith('ggml-base.bin')) {
+        return modelExists;
+      }
+      if (p.endsWith('whisper-cli')) {
+        return exeExists;
+      }
+      return false;
+    });
+    mockAutoDownloadModel.mockImplementation(async () => {
+      modelExists = true;
+    });
+    mockExecuteCppCommand.mockImplementation(async () => {
+      exeExists = true;
+    });
+
+    await engine.warmup();
+
+    expect(mockAutoDownloadModel).toHaveBeenCalledWith(expect.anything(), 'base', false, undefined);
+    expect(mockExecuteCppCommand).toHaveBeenCalledTimes(1);
+    expect(mockExecuteCppCommand).toHaveBeenCalledWith(
+      'cmake --build build --config Release',
+      expect.anything(),
+      false,
+    );
+    expect(mockConvertToWavType).not.toHaveBeenCalled();
+  });
+
+  it('throws when the model is missing during warm-up and auto-download is disabled', async () => {
+    process.env.WHISPER_AUTO_DOWNLOAD = 'false';
+    mockExistsSync.mockReturnValue(false);
+
+    await expect(engine.warmup()).rejects.toThrow(TRANSCRIPTION_ERRORS.MODEL_NOT_DOWNLOADED);
+
+    expect(mockAutoDownloadModel).not.toHaveBeenCalled();
+    expect(mockConvertToWavType).not.toHaveBeenCalled();
+  });
+
   it('maps ffmpeg conversion failure to FFMPEG_NOT_FOUND', async () => {
     mockExistsSync.mockReturnValue(true);
     mockConvertToWavType.mockRejectedValue(

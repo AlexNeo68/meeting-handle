@@ -1,28 +1,48 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { TranscriptionStatus } from '../../generated/prisma/enums';
 import { StoragePathService } from '../files/storage-path.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { WHISPER_ENGINE } from './transcription.constants';
+import {
+  transcriptionConcurrency,
+  transcriptionEnabled,
+  TRANSCRIPTION_ERRORS,
+  WHISPER_ENGINE,
+} from './transcription.constants';
 import type { WhisperEngine } from './transcription.constants';
 
 @Injectable()
-export class TranscriptionService {
+export class TranscriptionService implements OnModuleInit {
+  readonly enabled: boolean;
   private readonly logger = new Logger(TranscriptionService.name);
   private readonly queue: string[] = [];
   private readonly inFlight = new Set<string>();
   private readonly lastProgress = new Map<string, number>();
   private readonly concurrency: number;
-  private readonly enabled: boolean;
 
   constructor(
     @Inject(WHISPER_ENGINE) private readonly engine: WhisperEngine,
     private readonly prisma: PrismaService,
     private readonly storagePath: StoragePathService,
   ) {
-    const parsed = parseInt(process.env.TRANSCRIPTION_CONCURRENCY ?? '1', 10);
-    this.concurrency = Number.isInteger(parsed) && parsed >= 1 ? parsed : 1;
-    this.enabled = process.env.TRANSCRIPTION_ENABLED !== 'false';
+    this.concurrency = transcriptionConcurrency();
+    this.enabled = transcriptionEnabled();
+  }
+
+  async onModuleInit(): Promise<void> {
+    const result = await this.prisma.meetingFile.updateMany({
+      where: { transcriptionStatus: TranscriptionStatus.PROCESSING },
+      data: {
+        transcriptionStatus: TranscriptionStatus.FAILED,
+        transcriptionError: TRANSCRIPTION_ERRORS.INTERRUPTED_BY_RESTART,
+      },
+    });
+    if (result.count > 0) {
+      this.logger.warn(`Recovered ${result.count} interrupted transcription(s)`);
+    }
+    if (this.enabled) {
+      this.engine.warmup?.().catch((err) => this.logger.warn(`Whisper warm-up failed: ${String(err)}`));
+    }
   }
 
   enqueue(fileId: string): void {
